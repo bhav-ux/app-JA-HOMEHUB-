@@ -1,6 +1,8 @@
-import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
+import ActionButton from '../src/components/ActionButton';
+import { colors, spacing, typography } from '../src/theme';
 
 export default function HomeScreen({ navigation }) {
   const handleLogout = async () => {
@@ -19,8 +21,17 @@ export default function HomeScreen({ navigation }) {
       <Text style={styles.body}>
         This is where you can continue building your app experience.
       </Text>
-      <Button title="View profile" onPress={() => navigation.navigate('Profile')} />
-      <Button title="Log out" color="#ff3b30" onPress={handleLogout} />
+      <ActionButton
+        label="View profile"
+        onPress={() => navigation.navigate('Profile')}
+        accessibilityHint="Go to your profile"
+      />
+      <ActionButton
+        label="Log out"
+        onPress={handleLogout}
+        variant="danger"
+        accessibilityHint="Sign out of your account"
+      />
     </View>
   );
 }
@@ -28,19 +39,19 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    padding: spacing.xl,
     justifyContent: 'center',
-    gap: 16,
+    gap: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
+    ...typography.title,
     textAlign: 'center',
+    color: colors.textPrimary,
   },
   body: {
-    fontSize: 16,
+    fontSize: typography.body.fontSize + 1,
     textAlign: 'center',
-    color: '#333',
+    color: colors.textSecondary,
   },
 });
-

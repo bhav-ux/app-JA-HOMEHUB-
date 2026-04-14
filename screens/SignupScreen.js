@@ -4,13 +4,14 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import ActionButton from '../src/components/ActionButton';
+import { colors, radius, shadow, spacing, typography } from '../src/theme';
 
 export default function SignupScreen({ navigation }) {
   const [name, setName] = useState('');
@@ -58,13 +59,16 @@ export default function SignupScreen({ navigation }) {
         <View style={styles.card}>
           <Text style={styles.title}>Create account</Text>
           <View style={styles.field}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Your full name"
-            value={name}
-            onChangeText={setName}
-          />
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Your full name"
+              value={name}
+              onChangeText={setName}
+              textContentType="name"
+              autoComplete="name"
+              returnKeyType="next"
+            />
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
@@ -72,7 +76,10 @@ export default function SignupScreen({ navigation }) {
               style={styles.input}
               placeholder="name@example.com"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               keyboardType="email-address"
+              returnKeyType="next"
               value={email}
               onChangeText={setEmail}
             />
@@ -83,19 +90,23 @@ export default function SignupScreen({ navigation }) {
               style={styles.input}
               placeholder="Create a password"
               secureTextEntry
+              autoComplete="password"
+              textContentType="newPassword"
+              returnKeyType="done"
               value={password}
               onChangeText={setPassword}
+              onSubmitEditing={handleSignup}
             />
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <View style={styles.button}>
-            <Button
-              color="#007AFF"
-              title={loading ? 'Creating account…' : 'Sign up'}
-              onPress={handleSignup}
-              disabled={loading}
-            />
-          </View>
+          <ActionButton
+            label={loading ? 'Creating account…' : 'Sign up'}
+            onPress={handleSignup}
+            loading={loading}
+            disabled={loading}
+            accessibilityHint="Create your account"
+            style={styles.primaryButton}
+          />
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.goBack()}>
             <Text style={styles.linkText}>Already have an account? Log in</Text>
           </TouchableOpacity>
@@ -108,73 +119,66 @@ export default function SignupScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingVertical: 30,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     justifyContent: 'center',
   },
   brand: {
-    fontSize: 28,
+    fontSize: typography.title.fontSize + 4,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.lg,
+    color: colors.textPrimary,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '600',
+    ...typography.heading,
     textAlign: 'center',
-    marginBottom: 24,
-    color: '#111',
+    marginBottom: spacing.lg,
+    color: colors.textPrimary,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow,
   },
   field: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   label: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 6,
+    fontSize: typography.body.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  button: {
-    marginTop: 8,
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + spacing.xs,
+    fontSize: typography.body.fontSize + 2,
+    backgroundColor: colors.surface,
   },
   error: {
-    color: '#d00',
-    fontSize: 13,
+    color: colors.error,
+    fontSize: typography.small.fontSize,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   linkRow: {
-    marginTop: 8,
+    marginTop: spacing.md,
     alignItems: 'center',
   },
   linkText: {
-    color: '#007AFF',
-    fontSize: 15,
+    color: colors.primary,
+    fontSize: typography.body.fontSize + 1,
+  },
+  primaryButton: {
+    marginTop: spacing.xs,
   },
 });

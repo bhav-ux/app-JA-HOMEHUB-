@@ -228,6 +228,9 @@ export default function CalendarScreen({ navigation }) {
                 onPress={() => handleDeleteCalendarEvent(item)}
                 accessibilityRole="button"
                 accessibilityLabel="Delete event"
+                accessibilityHint="Remove this event"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.deleteButton}
               >
                 <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
@@ -378,6 +381,8 @@ export default function CalendarScreen({ navigation }) {
               onPress={handleAddNote}
               accessibilityRole="button"
               accessibilityLabel="Add calendar note"
+              accessibilityHint="Create a new calendar note"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.fabText}>+</Text>
             </TouchableOpacity>
@@ -475,9 +480,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   deleteText: {
-    color: colors.error || '#ff3b30',
+    color: colors.error,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  deleteButton: {
+    minHeight: 32,
+    minWidth: 44,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   eventDescription: {
     ...typography.body,

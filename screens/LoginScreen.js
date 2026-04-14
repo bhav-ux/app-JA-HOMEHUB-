@@ -4,13 +4,14 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import ActionButton from '../src/components/ActionButton';
+import { colors, radius, shadow, spacing, typography } from '../src/theme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -66,7 +67,10 @@ export default function LoginScreen({ navigation }) {
               style={styles.input}
               placeholder="name@example.com"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               keyboardType="email-address"
+              returnKeyType="next"
               value={email}
               onChangeText={setEmail}
             />
@@ -77,19 +81,23 @@ export default function LoginScreen({ navigation }) {
               style={styles.input}
               placeholder="Enter your password"
               secureTextEntry
+              autoComplete="password"
+              textContentType="password"
+              returnKeyType="done"
               value={password}
               onChangeText={setPassword}
+              onSubmitEditing={handleLogin}
             />
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <View style={styles.button}>
-            <Button
-              color="#007AFF"
-              title={loading ? 'Logging in…' : 'Continue'}
-              onPress={handleLogin}
-              disabled={loading}
-            />
-          </View>
+          <ActionButton
+            label={loading ? 'Logging in…' : 'Continue'}
+            onPress={handleLogin}
+            loading={loading}
+            disabled={loading}
+            accessibilityHint="Log in and continue"
+            style={styles.primaryButton}
+          />
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Signup')}>
             <Text style={styles.linkText}>Need an account? Sign up</Text>
           </TouchableOpacity>
@@ -102,73 +110,66 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingVertical: 30,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     justifyContent: 'center',
   },
   brand: {
-    fontSize: 28,
+    fontSize: typography.title.fontSize + 4,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.lg,
+    color: colors.textPrimary,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '600',
+    ...typography.heading,
     textAlign: 'center',
-    marginBottom: 24,
-    color: '#111',
+    marginBottom: spacing.lg,
+    color: colors.textPrimary,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow,
   },
   field: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   label: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 6,
+    fontSize: typography.body.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  button: {
-    marginTop: 8,
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + spacing.xs,
+    fontSize: typography.body.fontSize + 2,
+    backgroundColor: colors.surface,
   },
   error: {
-    color: '#d00',
-    fontSize: 13,
+    color: colors.error,
+    fontSize: typography.small.fontSize,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   linkRow: {
-    marginTop: 8,
+    marginTop: spacing.md,
     alignItems: 'center',
   },
   linkText: {
-    color: '#007AFF',
-    fontSize: 15,
+    color: colors.primary,
+    fontSize: typography.body.fontSize + 1,
+  },
+  primaryButton: {
+    marginTop: spacing.xs,
   },
 });

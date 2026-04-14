@@ -12,6 +12,7 @@ import {
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { deleteAlbum } from '../utils/delete';
+import { colors, radius, shadow, spacing, typography } from '../src/theme';
 
 export default function AlbumsScreen({ navigation, route, familyId: familyIdProp }) {
   const familyId = familyIdProp ?? route?.params?.familyId;
@@ -89,7 +90,12 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
 
   const renderAlbum = ({ item }) => (
     <View style={styles.albumCard}>
-      <TouchableOpacity style={styles.albumInfo} onPress={() => handleOpenAlbum(item)}>
+      <TouchableOpacity
+        style={styles.albumInfo}
+        onPress={() => handleOpenAlbum(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`Open album ${item.name || 'Untitled Album'}`}
+      >
         <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
         <Text style={styles.albumMeta}>Tap to view</Text>
       </TouchableOpacity>
@@ -98,6 +104,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
         onPress={() => handleDeleteAlbum(item)}
         accessibilityRole="button"
         accessibilityLabel="Delete album"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Text style={styles.deleteButtonText}>Delete</Text>
       </TouchableOpacity>
@@ -132,6 +139,8 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
           onPress={handleCreateAlbum}
           accessibilityRole="button"
           accessibilityLabel="Create album"
+          accessibilityHint="Create a new album"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
@@ -143,16 +152,17 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    padding: 16,
+    padding: spacing.xl,
+    backgroundColor: colors.background,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 12,
+    ...typography.title,
+    marginBottom: spacing.lg,
+    color: colors.textPrimary,
   },
   centerContent: {
     flex: 1,
@@ -160,75 +170,74 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   infoText: {
-    fontSize: 16,
-    color: '#555',
+    fontSize: typography.body.fontSize + 1,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   listContent: {
-    paddingBottom: 96,
-    gap: 12,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
   },
   emptyContent: {
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
   },
   albumCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#f7f7f7',
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e4e4e4',
+    borderColor: colors.border,
+    ...shadow,
   },
   albumInfo: {
     flex: 1,
   },
   albumName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111',
+    ...typography.heading,
+    color: colors.textPrimary,
   },
   albumMeta: {
-    marginTop: 4,
-    fontSize: 14,
-    color: '#666',
+    marginTop: spacing.xs,
+    fontSize: typography.body.fontSize,
+    color: colors.textSecondary,
   },
   deleteButton: {
-    marginLeft: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    marginLeft: spacing.md,
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#ff3b30',
+    borderColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteButtonText: {
-    color: '#ff3b30',
-    fontSize: 13,
-    fontWeight: '600',
+    color: colors.error,
+    fontSize: typography.small.fontSize + 1,
+    fontWeight: '700',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#777',
+    fontSize: typography.body.fontSize + 1,
+    color: colors.textSecondary,
   },
   fab: {
     position: 'absolute',
-    right: 24,
-    bottom: 32,
+    right: spacing.xl,
+    bottom: spacing.xl,
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    ...shadow,
   },
   fabText: {
     color: '#fff',

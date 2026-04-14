@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import { colors, radius, shadow, spacing, typography } from '../src/theme';
 
 export default function CreateAlbumScreen({ navigation, route, familyId: familyIdProp }) {
   const [albumName, setAlbumName] = useState('');
@@ -98,52 +99,52 @@ export default function CreateAlbumScreen({ navigation, route, familyId: familyI
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   container: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 120,
-    gap: 20,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl + spacing.xl,
+    gap: spacing.lg,
   },
   header: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...typography.title,
     textAlign: 'center',
-    color: '#111',
+    color: colors.textPrimary,
   },
   field: {
-    gap: 8,
+    gap: spacing.sm,
   },
   label: {
-    fontSize: 15,
-    color: '#555',
+    fontSize: typography.body.fontSize,
+    color: colors.textSecondary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + spacing.xs,
+    fontSize: typography.body.fontSize + 2,
+    backgroundColor: colors.surface,
   },
   footer: {
-    padding: 20,
+    padding: spacing.xl,
     borderTopWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    ...shadow,
   },
   saveText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: typography.body.fontSize + 2,
+    fontWeight: '700',
   },
   disabled: {
     opacity: 0.5,
@@ -152,11 +153,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   infoText: {
-    fontSize: 16,
-    color: '#777',
+    fontSize: typography.body.fontSize + 1,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 });

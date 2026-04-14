@@ -7,10 +7,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { deleteEvent } from '../utils/delete';
 import { auth } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
+import { colors, radius, shadow, spacing, typography } from '../src/theme';
 
 export default function EventDetailsScreen({ route, navigation }) {
   const { event, familyId: passedFamilyId } = route.params || {};
@@ -98,8 +100,15 @@ export default function EventDetailsScreen({ route, navigation }) {
             style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
             onPress={handleDelete}
             disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Delete event"
+            accessibilityHint="Remove this event from your family"
           >
-            <Text style={styles.deleteButtonText}>{deleting ? 'Deleting…' : 'Delete Event'}</Text>
+            {deleting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.deleteButtonText}>Delete Event</Text>
+            )}
           </TouchableOpacity>
         ) : null}
       </ScrollView>
@@ -110,55 +119,55 @@ export default function EventDetailsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   container: {
-    padding: 20,
-    gap: 16,
+    padding: spacing.xl,
+    gap: spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111',
+    ...typography.title,
+    color: colors.textPrimary,
   },
   date: {
-    fontSize: 16,
-    color: '#555',
+    fontSize: typography.body.fontSize + 1,
+    color: colors.textSecondary,
   },
   meta: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.small.fontSize,
+    color: colors.textSecondary,
   },
   description: {
-    marginTop: 8,
-    fontSize: 16,
-    color: '#222',
+    marginTop: spacing.sm,
+    fontSize: typography.body.fontSize + 1,
+    color: colors.textPrimary,
     lineHeight: 22,
   },
   deleteButton: {
-    marginTop: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#ff3b30',
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.error,
     alignItems: 'center',
+    ...shadow,
   },
   deleteButtonDisabled: {
     opacity: 0.6,
   },
   deleteButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.body.fontSize + 1,
+    fontWeight: '700',
   },
   centerContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   infoText: {
-    fontSize: 16,
-    color: '#777',
+    fontSize: typography.body.fontSize + 1,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 });

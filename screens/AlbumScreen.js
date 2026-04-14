@@ -177,6 +177,8 @@ export default function AlbumScreen({ route }) {
           }}
           accessibilityRole="button"
           accessibilityLabel="Delete photo"
+          accessibilityHint="Removes this photo from the album"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={styles.photoDeleteText}>Delete</Text>
         </TouchableOpacity>
@@ -230,6 +232,8 @@ export default function AlbumScreen({ route }) {
         activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel="Upload photo"
+        accessibilityHint="Choose a photo to upload"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fabText}>+</Text>}
       </TouchableOpacity>
@@ -291,13 +295,16 @@ const styles = StyleSheet.create({
     top: 6,
     right: 6,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
+    minHeight: 28,
+    minWidth: 44,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   photoDeleteText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   photoBox: {

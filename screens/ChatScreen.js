@@ -26,6 +26,7 @@ export default function ChatScreen({ navigation }) {
   const [familyId, setFamilyId] = useState(null);
   const [familyLoading, setFamilyLoading] = useState(true);
   const [nameMap, setNameMap] = useState({});
+  const [sending, setSending] = useState(false);
   const listRef = useRef(null);
   const nameListeners = useRef({});
 
@@ -119,11 +120,12 @@ export default function ChatScreen({ navigation }) {
   const handleSend = async () => {
     const trimmed = input.trim();
     const userId = auth.currentUser?.uid;
-    if (!trimmed || !userId || !familyId) {
+    if (!trimmed || !userId || !familyId || sending) {
       return;
     }
 
     try {
+      setSending(true);
       await addDoc(collection(db, 'families', familyId, 'messages'), {
         text: trimmed,
         senderId: userId,
@@ -135,6 +137,8 @@ export default function ChatScreen({ navigation }) {
     } catch (error) {
       // In a real app you might show a toast or error state
       console.error('Failed to send message', error);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -183,7 +187,7 @@ export default function ChatScreen({ navigation }) {
     );
   };
 
-  const isSendDisabled = !input.trim();
+  const isSendDisabled = !input.trim() || sending;
 
   if (loading || familyLoading) {
     return (
@@ -236,8 +240,9 @@ export default function ChatScreen({ navigation }) {
             disabled={isSendDisabled}
             accessibilityRole="button"
             accessibilityLabel="Send message"
+            accessibilityHint="Sends your message to the family chat"
           >
-            <Ionicons name="send" size={18} color="#fff" />
+            {sending ? <ActivityIndicator color="#fff" /> : <Ionicons name="send" size={18} color="#fff" />}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

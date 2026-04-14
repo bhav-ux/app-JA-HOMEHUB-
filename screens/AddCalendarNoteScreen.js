@@ -17,6 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import { colors, radius, shadow, spacing, typography } from '../src/theme';
 
 export default function AddCalendarNoteScreen({ navigation }) {
   const [title, setTitle] = useState('');
@@ -111,7 +112,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -223,74 +224,74 @@ export default function AddCalendarNoteScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   container: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 120,
-    gap: 20,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl + spacing.xl,
+    gap: spacing.lg,
   },
   header: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...typography.title,
     textAlign: 'center',
-    color: '#111',
+    color: colors.textPrimary,
   },
   field: {
-    gap: 8,
+    gap: spacing.sm,
   },
   label: {
-    fontSize: 15,
-    color: '#555',
+    fontSize: typography.body.fontSize,
+    color: colors.textSecondary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + spacing.xs,
+    fontSize: typography.body.fontSize + 2,
+    backgroundColor: colors.surface,
   },
   dateTimeField: {
-    paddingVertical: 16,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    marginTop: 8,
+    borderBottomColor: colors.border,
+    marginTop: spacing.xs,
   },
   dateTimeLabel: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.small.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   dateTimeValue: {
-    fontSize: 17,
-    color: '#111',
+    fontSize: typography.body.fontSize + 3,
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   placeholder: {
-    color: '#999',
+    color: colors.textSecondary,
     fontWeight: '400',
   },
   footer: {
-    padding: 20,
+    padding: spacing.xl,
     borderTopWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    ...shadow,
   },
   saveText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: typography.body.fontSize + 2,
+    fontWeight: '700',
   },
   disabled: {
     opacity: 0.5,
@@ -299,11 +300,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   infoText: {
-    fontSize: 16,
-    color: '#777',
+    fontSize: typography.body.fontSize + 1,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   modalOverlay: {
@@ -313,11 +314,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     width: '90%',
     maxWidth: 400,
-    padding: 20,
+    padding: spacing.lg,
     ...(Platform.OS === 'ios' && {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
@@ -332,19 +333,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 12,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111',
+    ...typography.heading,
+    color: colors.textPrimary,
   },
   modalButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
+    fontSize: typography.body.fontSize + 1,
+    color: colors.primary,
   },
   modalDoneText: {
     fontWeight: '600',

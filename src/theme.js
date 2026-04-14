@@ -5,6 +5,7 @@ export const colors = {
   textPrimary: '#111',
   textSecondary: '#666',
   border: '#E5E5EA',
+  error: '#FF3B30',
 };
 
 export const radius = {

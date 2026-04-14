@@ -144,6 +144,7 @@ export default function PhotosScreen({ navigation }) {
         accessibilityRole="button"
         accessibilityLabel="Delete album"
         style={styles.deleteButton}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Text style={styles.deleteButtonText}>Delete</Text>
       </TouchableOpacity>
@@ -200,7 +201,14 @@ export default function PhotosScreen({ navigation }) {
             }
           />
         )}
-        <TouchableOpacity style={styles.fab} onPress={handleCreateAlbum}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleCreateAlbum}
+          accessibilityRole="button"
+          accessibilityLabel="Create album"
+          accessibilityHint="Create a new album"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -260,16 +268,19 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginLeft: spacing.md,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#ff3b30',
+    borderColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteButtonText: {
-    color: '#ff3b30',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.error,
+    fontSize: typography.small.fontSize + 1,
+    fontWeight: '700',
   },
   emptyState: {
     marginTop: spacing.xxl + spacing.md,
