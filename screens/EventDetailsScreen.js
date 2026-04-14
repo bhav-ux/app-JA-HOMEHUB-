@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { deleteDoc, doc } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';
+import { deleteEvent } from '../utils/delete';
+import { auth } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
 
 export default function EventDetailsScreen({ route, navigation }) {
@@ -49,7 +49,7 @@ export default function EventDetailsScreen({ route, navigation }) {
   }, [event]);
 
   const handleDelete = () => {
-    if (!user || !event?.id || !familyId || event.createdBy !== user.uid) {
+    if (!user || !event?.id || !familyId) {
       return;
     }
 
@@ -61,10 +61,11 @@ export default function EventDetailsScreen({ route, navigation }) {
         onPress: async () => {
           try {
             setDeleting(true);
-            await deleteDoc(doc(db, 'families', familyId, 'events', event.id));
+            await deleteEvent({ familyId, eventId: event.id, currentUser: user });
             navigation.goBack();
           } catch (error) {
             console.error('Failed to delete event', error);
+            Alert.alert('Not allowed', error.message || 'You can only delete your own events');
             setDeleting(false);
           }
         },

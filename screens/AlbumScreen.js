@@ -17,6 +17,7 @@ import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firesto
 import { auth, db } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
 import { uploadImage } from '../utils/uploadImage';
+import { deletePhoto } from '../utils/delete';
 
 export default function AlbumScreen({ route }) {
   const { albumName, albumId, familyId } = route?.params || {};
@@ -146,6 +147,39 @@ export default function AlbumScreen({ route }) {
         accessibilityRole="button"
         accessibilityLabel="Open photo"
       >
+        <TouchableOpacity
+          style={styles.photoDeleteButton}
+          onPress={() => {
+            if (!auth.currentUser) {
+              Alert.alert('Not signed in', 'You need to be signed in to delete photos.');
+              return;
+            }
+            Alert.alert('Delete Photo', 'Are you sure you want to delete this?', [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await deletePhoto({
+                      familyId,
+                      albumId,
+                      photoId: item.id,
+                      photoPath: item.path,
+                    });
+                  } catch (error) {
+                    console.error('Failed to delete photo', error);
+                    Alert.alert('Delete failed', error.message || 'Could not delete photo.');
+                  }
+                },
+              },
+            ]);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Delete photo"
+        >
+          <Text style={styles.photoDeleteText}>Delete</Text>
+        </TouchableOpacity>
         <View style={styles.photoBox}>
           {item.url ? (
             <Image source={{ uri: item.url }} style={styles.photo} />
@@ -250,6 +284,21 @@ const styles = StyleSheet.create({
   photoWrapper: {
     flex: 1 / 3,
     paddingHorizontal: 2,
+  },
+  photoDeleteButton: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  photoDeleteText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
   },
   photoBox: {
     aspectRatio: 1,

@@ -10,7 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { auth, db } from '../firebaseConfig';
+import { deleteAlbum } from '../utils/delete';
 
 export default function AlbumsScreen({ navigation, route, familyId: familyIdProp }) {
   const familyId = familyIdProp ?? route?.params?.familyId;
@@ -63,11 +64,44 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
     });
   };
 
+  const handleDeleteAlbum = (album) => {
+    if (!auth.currentUser) {
+      Alert.alert('Not signed in', 'You need to be signed in to delete albums.');
+      return;
+    }
+    if (!album?.id || !familyId) return;
+    Alert.alert('Delete Album and all photos?', 'Are you sure you want to delete this?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteAlbum({ familyId, albumId: album.id });
+          } catch (error) {
+            console.error('Failed to delete album', error);
+            Alert.alert('Delete failed', error.message || 'Could not delete album.');
+          }
+        },
+      },
+    ]);
+  };
+
   const renderAlbum = ({ item }) => (
-    <TouchableOpacity style={styles.albumCard} onPress={() => handleOpenAlbum(item)}>
-      <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
-      <Text style={styles.albumMeta}>Tap to view</Text>
-    </TouchableOpacity>
+    <View style={styles.albumCard}>
+      <TouchableOpacity style={styles.albumInfo} onPress={() => handleOpenAlbum(item)}>
+        <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
+        <Text style={styles.albumMeta}>Tap to view</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => handleDeleteAlbum(item)}
+        accessibilityRole="button"
+        accessibilityLabel="Delete album"
+      >
+        <Text style={styles.deleteButtonText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -141,11 +175,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   albumCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     borderRadius: 12,
     backgroundColor: '#f7f7f7',
     borderWidth: 1,
     borderColor: '#e4e4e4',
+  },
+  albumInfo: {
+    flex: 1,
   },
   albumName: {
     fontSize: 18,
@@ -156,6 +196,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
     color: '#666',
+  },
+  deleteButton: {
+    marginLeft: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff3b30',
+  },
+  deleteButtonText: {
+    color: '#ff3b30',
+    fontSize: 13,
+    fontWeight: '600',
   },
   emptyText: {
     fontSize: 16,

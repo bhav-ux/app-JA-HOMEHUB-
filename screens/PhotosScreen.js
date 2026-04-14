@@ -9,9 +9,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import { deleteAlbum } from '../utils/delete';
 
 export default function PhotosScreen({ navigation }) {
   const [albums, setAlbums] = useState([]);
@@ -93,10 +94,14 @@ export default function PhotosScreen({ navigation }) {
     navigation.navigate('Album', { albumId: album.id, albumName: album.name });
   };
 
-  const handleAlbumLongPress = (album) => {
+  const handleDeleteAlbum = (album) => {
+    if (!auth.currentUser) {
+      Alert.alert('Not signed in', 'You need to be signed in to delete albums.');
+      return;
+    }
     if (!album?.id || !familyId) return;
     longPressFlag.current = true;
-    Alert.alert('Delete Album and all photos?', 'This cannot be undone.', [
+    Alert.alert('Delete Album and all photos?', 'Are you sure you want to delete this?', [
       {
         text: 'Cancel',
         style: 'cancel',
@@ -109,16 +114,13 @@ export default function PhotosScreen({ navigation }) {
         style: 'destructive',
         onPress: async () => {
           try {
-            const photosRef = collection(db, 'families', familyId, 'albums', album.id, 'photos');
-            const photosSnapshot = await getDocs(photosRef);
-            const deletePhotos = photosSnapshot.docs.map((photoDoc) => deleteDoc(photoDoc.ref));
-            await Promise.all(deletePhotos);
-            await deleteDoc(doc(db, 'families', familyId, 'albums', album.id));
+            await deleteAlbum({ familyId, albumId: album.id });
             if (navigation.canGoBack?.()) {
               navigation.goBack();
             }
           } catch (error) {
             console.error('Failed to delete album', error);
+            Alert.alert('Delete failed', error.message || 'Could not delete album.');
           } finally {
             longPressFlag.current = false;
           }
@@ -131,14 +133,20 @@ export default function PhotosScreen({ navigation }) {
     <TouchableOpacity
       style={styles.albumCard}
       onPress={() => handleAlbumPress(item)}
-      onLongPress={() => handleAlbumLongPress(item)}
-      delayLongPress={450}
       activeOpacity={0.7}
     >
       <View style={styles.albumContent}>
         <Text style={styles.albumName}>{item.name}</Text>
         <Text style={styles.albumCount}>0 photos</Text>
       </View>
+      <TouchableOpacity
+        onPress={() => handleDeleteAlbum(item)}
+        accessibilityRole="button"
+        accessibilityLabel="Delete album"
+        style={styles.deleteButton}
+      >
+        <Text style={styles.deleteButtonText}>Delete</Text>
+      </TouchableOpacity>
       <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
   );
@@ -249,6 +257,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.textSecondary,
     marginLeft: spacing.md,
+  },
+  deleteButton: {
+    marginLeft: spacing.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: '#ff3b30',
+  },
+  deleteButtonText: {
+    color: '#ff3b30',
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyState: {
     marginTop: spacing.xxl + spacing.md,

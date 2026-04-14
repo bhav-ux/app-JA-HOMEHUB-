@@ -5,6 +5,7 @@ import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query } from '
 import { format } from 'date-fns';
 import { auth, db } from '../firebaseConfig';
 import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import { deleteCalendarEvent } from '../utils/delete';
 
 export default function CalendarScreen({ navigation }) {
   const [events, setEvents] = useState([]);
@@ -189,17 +190,54 @@ export default function CalendarScreen({ navigation }) {
     return format(date, 'h:mm a');
   };
 
-  const renderEventItem = ({ item }) => (
-    <View style={styles.eventCard}>
-      <View style={styles.eventTimeContainer}>
-        <Text style={styles.eventTime}>{formatEventTime(item.date)}</Text>
+  const handleDeleteCalendarEvent = (eventItem) => {
+    if (!user || !familyId || !eventItem?.id) return;
+    Alert.alert('Delete Event', 'Are you sure you want to delete this?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCalendarEvent({
+              familyId,
+              eventId: eventItem.id,
+              currentUser: user,
+            });
+          } catch (error) {
+            console.error('Failed to delete calendar event', error);
+            Alert.alert('Not allowed', error.message || 'You can only delete your own events');
+          }
+        },
+      },
+    ]);
+  };
+
+  const renderEventItem = ({ item }) => {
+    const canDelete = user && item.createdBy === user.uid;
+    return (
+      <View style={styles.eventCard}>
+        <View style={styles.eventTimeContainer}>
+          <Text style={styles.eventTime}>{formatEventTime(item.date)}</Text>
+        </View>
+        <View style={styles.eventContent}>
+          <View style={styles.eventHeaderRow}>
+            <Text style={styles.eventTitle}>{item.title}</Text>
+            {canDelete ? (
+              <TouchableOpacity
+                onPress={() => handleDeleteCalendarEvent(item)}
+                accessibilityRole="button"
+                accessibilityLabel="Delete event"
+              >
+                <Text style={styles.deleteText}>Delete</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {item.description ? <Text style={styles.eventDescription}>{item.description}</Text> : null}
+        </View>
       </View>
-      <View style={styles.eventContent}>
-        <Text style={styles.eventTitle}>{item.title}</Text>
-        {item.description ? <Text style={styles.eventDescription}>{item.description}</Text> : null}
-      </View>
-    </View>
-  );
+    );
+  };
 
   const handleNoteLongPress = (note) => {
     if (!user || !note?.createdBy || note.createdBy !== user.uid || !familyId) {
@@ -426,10 +464,20 @@ const styles = StyleSheet.create({
   eventContent: {
     flex: 1,
   },
+  eventHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   eventTitle: {
     ...typography.heading,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
+  },
+  deleteText: {
+    color: colors.error || '#ff3b30',
+    fontSize: 13,
+    fontWeight: '600',
   },
   eventDescription: {
     ...typography.body,

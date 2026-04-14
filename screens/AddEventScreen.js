@@ -11,7 +11,7 @@ import {
   Platform,
 } from "react-native";
 import RNDateTimePicker from "@react-native-community/datetimepicker";
-import { addDoc, collection, doc, getDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
 import { colors, radius, shadow, spacing, typography } from "../src/theme";
 
@@ -39,6 +39,7 @@ export default function AddEventScreen({ navigation }) {
         if (userSnap.exists()) {
           setFamilyId(userSnap.data().familyId || null);
         }
+        console.log("[AddEvent] Family loaded:", userSnap.exists() ? userSnap.data().familyId || null : null);
       } catch (error) {
         console.error("Error fetching family", error);
       } finally {
@@ -72,17 +73,19 @@ export default function AddEventScreen({ navigation }) {
     }
     try {
       setSaving(true);
-      await addDoc(collection(db, "families", familyId, "events"), {
+      const docRef = await addDoc(collection(db, "families", familyId, "events"), {
         title: title.trim(),
         description: description.trim(),
         date,
         createdBy: user.uid,
         createdByEmail: user.email,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
 
+      console.log("[AddEvent] Event created:", docRef.id);
       navigation.goBack();
     } catch (err) {
+      console.error("[AddEvent] Failed to save event", err);
       Alert.alert("Failed to save", err.message);
     } finally {
       setSaving(false);

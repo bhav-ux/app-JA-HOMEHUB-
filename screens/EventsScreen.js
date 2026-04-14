@@ -31,12 +31,14 @@ export default function EventsScreen({ navigation }) {
       if (!user?.uid) {
         setFamilyLoading(false);
         setLoading(false);
+        setFamilyId(null);
         return;
       }
       try {
         const snap = await getDoc(doc(db, "users", user.uid));
         const familyValue = snap.exists() ? snap.data()?.familyId : null;
         setFamilyId(familyValue || null);
+        console.log("[Events] Family loaded:", familyValue || null);
       } catch (error) {
         console.error("Error fetching family", error);
       } finally {
@@ -48,11 +50,13 @@ export default function EventsScreen({ navigation }) {
 
   useEffect(() => {
     if (!user || !familyId) {
+      setEvents([]);
       setLoading(false);
       return;
     }
 
     // Bug fix: events are scoped to families, not a global collection.
+    setLoading(true);
     const eventsRef = collection(db, "families", familyId, "events");
     const q = query(eventsRef, orderBy("date", "asc"));
 
@@ -65,6 +69,7 @@ export default function EventsScreen({ navigation }) {
         }));
         setEvents(data);
         setLoading(false);
+        console.log("[Events] Snapshot received:", data.length);
       },
       (error) => {
         console.error("Error fetching events", error);
@@ -73,7 +78,7 @@ export default function EventsScreen({ navigation }) {
     );
 
     return unsubscribe;
-  }, [user]);
+  }, [user, familyId]);
 
   const formattedEvents = events.map((event) => {
     const dateValue = toValidDate(event?.date);
