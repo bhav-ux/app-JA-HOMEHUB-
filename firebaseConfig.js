@@ -20,10 +20,3 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 export default app;
-
-//git init
-//git add .
-//git commit -m "real project upload"
-//git remote set-url origin https://github.com/bhav-ux/app-JA-HOMEHUB-.git
-//git push -u origin main --force
-
