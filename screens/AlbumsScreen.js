@@ -12,9 +12,11 @@ import {
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { deleteAlbum } from '../utils/delete';
-import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function AlbumsScreen({ navigation, route, familyId: familyIdProp }) {
+  const { theme } = useAppTheme();
+  const styles = useStyles();
   const familyId = familyIdProp ?? route?.params?.familyId;
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,9 +57,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
   };
 
   const handleOpenAlbum = (album) => {
-    if (!familyId) {
-      return;
-    }
+    if (!familyId) return;
     navigation.navigate('Album', {
       albumId: album.id,
       albumName: album.name,
@@ -90,22 +90,11 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
 
   const renderAlbum = ({ item }) => (
     <View style={styles.albumCard}>
-      <TouchableOpacity
-        style={styles.albumInfo}
-        onPress={() => handleOpenAlbum(item)}
-        accessibilityRole="button"
-        accessibilityLabel={`Open album ${item.name || 'Untitled Album'}`}
-      >
+      <TouchableOpacity style={styles.albumInfo} onPress={() => handleOpenAlbum(item)}>
         <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
         <Text style={styles.albumMeta}>Tap to view</Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeleteAlbum(item)}
-        accessibilityRole="button"
-        accessibilityLabel="Delete album"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteAlbum(item)}>
         <Text style={styles.deleteButtonText}>Delete</Text>
       </TouchableOpacity>
     </View>
@@ -118,7 +107,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
 
         {loading ? (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : !familyId ? (
           <View style={styles.centerContent}>
@@ -134,14 +123,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
           />
         )}
 
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleCreateAlbum}
-          accessibilityRole="button"
-          accessibilityLabel="Create album"
-          accessibilityHint="Create a new album"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+        <TouchableOpacity style={styles.fab} onPress={handleCreateAlbum}>
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -149,101 +131,54 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    padding: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  title: {
-    ...typography.title,
-    marginBottom: spacing.lg,
-    color: colors.textPrimary,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  listContent: {
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
-  },
-  emptyContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  albumCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadow,
-  },
-  albumInfo: {
-    flex: 1,
-  },
-  albumName: {
-    ...typography.heading,
-    color: colors.textPrimary,
-  },
-  albumMeta: {
-    marginTop: spacing.xs,
-    fontSize: typography.body.fontSize,
-    color: colors.textSecondary,
-  },
-  deleteButton: {
-    marginLeft: spacing.md,
-    minHeight: 44,
-    minWidth: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.error,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButtonText: {
-    color: colors.error,
-    fontSize: typography.small.fontSize + 1,
-    fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.xl,
-    bottom: spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow,
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 32,
-    lineHeight: 34,
-    fontWeight: '700',
-    marginTop: -2,
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    container: { flex: 1, padding: spacing.lg, backgroundColor: theme.background },
+    title: { ...typography.title, marginBottom: spacing.lg, color: theme.text },
+    centerContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center' },
+    listContent: { paddingBottom: spacing.xxl, gap: spacing.md },
+    emptyContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
+    albumCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.lg,
+      borderRadius: radius.md,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      ...shadow,
+    },
+    albumInfo: { flex: 1 },
+    albumName: { ...typography.heading, color: theme.text },
+    albumMeta: { marginTop: spacing.xs, fontSize: typography.body.fontSize, color: theme.secondaryText },
+    deleteButton: {
+      marginLeft: spacing.md,
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: theme.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    deleteButtonText: { color: theme.error, fontSize: typography.small.fontSize + 1, fontWeight: '700' },
+    emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText },
+    fab: {
+      position: 'absolute',
+      right: spacing.lg,
+      bottom: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...shadow,
+    },
+    fabText: { color: '#fff', fontSize: 32, lineHeight: 34, fontWeight: '700', marginTop: -2 },
+  })
+);

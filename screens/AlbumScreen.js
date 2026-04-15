@@ -18,8 +18,11 @@ import { auth, db } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
 import { uploadImage } from '../utils/uploadImage';
 import { deletePhoto } from '../utils/delete';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function AlbumScreen({ route }) {
+  const { theme } = useAppTheme();
+  const styles = useStyles();
   const { albumName, albumId, familyId } = route?.params || {};
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,14 +38,10 @@ export default function AlbumScreen({ route }) {
       return;
     }
     const photosRef = collection(db, 'families', familyId, 'albums', albumId, 'photos');
-    const q = query(photosRef, orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(
-      q,
+      query(photosRef, orderBy('createdAt', 'desc')),
       (snapshot) => {
-        const data = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
+        const data = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
         setLoading(false);
         setPhotos(data);
         const creatorIds = Array.from(new Set(data.map((p) => p.createdBy).filter(Boolean)));
@@ -67,15 +66,6 @@ export default function AlbumScreen({ route }) {
       nameListeners.current = {};
     };
   }, []);
-
-  useEffect(() => {
-    const withUrls = photos.filter((photo) => photo.url);
-    if (viewerVisible && withUrls.length === 0) {
-      setViewerVisible(false);
-    } else if (viewerIndex >= withUrls.length && withUrls.length > 0) {
-      setViewerIndex(0);
-    }
-  }, [photos, viewerIndex, viewerVisible]);
 
   const requestPermission = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -111,7 +101,6 @@ export default function AlbumScreen({ route }) {
       const fileId = Crypto.randomUUID ? Crypto.randomUUID() : `${Date.now()}`;
       const filePath = `${familyId}/${albumId}/${fileId}.jpg`;
       const imageUrl = await uploadImage(asset.uri, filePath);
-
       await addDoc(collection(db, 'families', familyId, 'albums', albumId, 'photos'), {
         url: imageUrl,
         path: filePath,
@@ -144,8 +133,6 @@ export default function AlbumScreen({ route }) {
             setViewerVisible(true);
           }
         }}
-        accessibilityRole="button"
-        accessibilityLabel="Open photo"
       >
         <TouchableOpacity
           style={styles.photoDeleteButton}
@@ -161,12 +148,7 @@ export default function AlbumScreen({ route }) {
                 style: 'destructive',
                 onPress: async () => {
                   try {
-                    await deletePhoto({
-                      familyId,
-                      albumId,
-                      photoId: item.id,
-                      photoPath: item.path,
-                    });
+                    await deletePhoto({ familyId, albumId, photoId: item.id, photoPath: item.path });
                   } catch (error) {
                     console.error('Failed to delete photo', error);
                     Alert.alert('Delete failed', error.message || 'Could not delete photo.');
@@ -175,10 +157,6 @@ export default function AlbumScreen({ route }) {
               },
             ]);
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Delete photo"
-          accessibilityHint="Removes this photo from the album"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={styles.photoDeleteText}>Delete</Text>
         </TouchableOpacity>
@@ -207,7 +185,7 @@ export default function AlbumScreen({ route }) {
 
       {loading ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       ) : !familyId || !albumId ? (
         <View style={styles.centerContent}>
@@ -225,16 +203,7 @@ export default function AlbumScreen({ route }) {
         />
       )}
 
-      <TouchableOpacity
-        style={[styles.fab, uploading && styles.fabDisabled]}
-        onPress={handleUpload}
-        disabled={uploading}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel="Upload photo"
-        accessibilityHint="Choose a photo to upload"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+      <TouchableOpacity style={[styles.fab, uploading && styles.fabDisabled]} onPress={handleUpload} disabled={uploading}>
         {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fabText}>+</Text>}
       </TouchableOpacity>
 
@@ -248,118 +217,55 @@ export default function AlbumScreen({ route }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  listContent: {
-    paddingHorizontal: 8,
-    paddingBottom: 96,
-  },
-  emptyContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  columnWrapper: {
-    gap: 8,
-    paddingHorizontal: 8,
-    marginBottom: 8,
-  },
-  photoWrapper: {
-    flex: 1 / 3,
-    paddingHorizontal: 2,
-  },
-  photoDeleteButton: {
-    position: 'absolute',
-    zIndex: 2,
-    top: 6,
-    right: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    minHeight: 28,
-    minWidth: 44,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoDeleteText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  photoBox: {
-    aspectRatio: 1,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#f2f2f2',
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
-  photoPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#e9e9e9',
-  },
-  photoPlaceholderText: {
-    fontSize: 11,
-    color: '#666',
-  },
-  photoMeta: {
-    marginTop: 4,
-    fontSize: 11,
-    color: '#555',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#777',
-  },
-  fab: {
-    position: 'absolute',
-    right: 24,
-    bottom: 32,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 32,
-    lineHeight: 34,
-    fontWeight: '700',
-    marginTop: -2,
-  },
-  fabDisabled: {
-    opacity: 0.7,
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+    title: { fontSize: 22, fontWeight: '700', color: theme.text },
+    centerContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    infoText: { fontSize: 16, color: theme.secondaryText },
+    listContent: { paddingHorizontal: spacing.sm, paddingBottom: 96 },
+    emptyContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
+    columnWrapper: { gap: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: spacing.sm },
+    photoWrapper: { flex: 1 / 3, paddingHorizontal: 2 },
+    photoDeleteButton: {
+      position: 'absolute',
+      zIndex: 2,
+      top: 6,
+      right: 6,
+      backgroundColor: theme.overlay,
+      minHeight: 28,
+      minWidth: 44,
+      paddingHorizontal: 8,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    photoDeleteText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+    photoBox: {
+      aspectRatio: 1,
+      borderRadius: 10,
+      overflow: 'hidden',
+      backgroundColor: theme.inputBackground,
+    },
+    photo: { width: '100%', height: '100%' },
+    photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.inputBackground },
+    photoPlaceholderText: { fontSize: 11, color: theme.secondaryText },
+    photoMeta: { marginTop: 4, fontSize: 11, color: theme.secondaryText },
+    emptyText: { fontSize: 16, color: theme.secondaryText },
+    fab: {
+      position: 'absolute',
+      right: spacing.lg,
+      bottom: spacing.xl,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...shadow,
+    },
+    fabText: { color: '#fff', fontSize: 32, lineHeight: 34, fontWeight: '700', marginTop: -2 },
+    fabDisabled: { opacity: 0.7 },
+  })
+);

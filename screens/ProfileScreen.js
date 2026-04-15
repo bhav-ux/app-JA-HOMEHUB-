@@ -1,22 +1,39 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   SafeAreaView,
+  ScrollView,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  TextInput,
+  Switch,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Share } from 'react-native';
-import { collection, doc, getDoc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
-import { auth, db } from '../firebaseConfig';
-import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import {
+  arrayRemove,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
+import { deleteUser, signOut } from 'firebase/auth';
+import { deleteObject, ref } from 'firebase/storage';
+import { auth, db, storage } from '../firebaseConfig';
+import Button from '../src/components/Button';
+import Input from '../src/components/Input';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function ProfileScreen({ navigation, route, familyId: familyIdProp }) {
+  const { theme, isDark, toggleTheme } = useAppTheme();
+  const styles = useStyles();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -25,6 +42,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
   const [savingName, setSavingName] = useState(false);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(true);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const user = auth.currentUser;
   const familyId = familyIdProp ?? profile?.familyId ?? route?.params?.familyId;
@@ -49,8 +67,8 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
           if (isMounted) setProfile(snapshot.data());
-        } else {
-          if (isMounted) setError('Profile not found.');
+        } else if (isMounted) {
+          setError('Profile not found.');
         }
       } catch (err) {
         if (isMounted) setError(err.message);
@@ -103,15 +121,8 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
   const createdAtText = useMemo(() => {
     if (!profile?.createdAt) return '—';
     const value = profile.createdAt;
-
-    if (typeof value === 'string' || typeof value === 'number') {
-      return new Date(value).toLocaleString();
-    }
-
-    if (value?.seconds) {
-      return new Date(value.seconds * 1000).toLocaleString();
-    }
-
+    if (typeof value === 'string' || typeof value === 'number') return new Date(value).toLocaleString();
+    if (value?.seconds) return new Date(value.seconds * 1000).toLocaleString();
     return '—';
   }, [profile]);
 
@@ -137,9 +148,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     navigation.navigate('Albums', { familyId });
   }, [familyId, navigation]);
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   const handleCopy = async () => {
     if (!familyId) return;
@@ -153,21 +162,10 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
   const handleShare = async () => {
     if (!familyId) return;
     try {
-      await Share.share({
-        message: `Join my family on JA HOMEHUB: ${familyId}`,
-      });
+      await Share.share({ message: `Join my family on JA HOMEHUB: ${familyId}` });
     } catch (err) {
       Alert.alert('Error', 'Unable to share code right now.');
     }
-  };
-
-  const handleEditName = () => {
-    setIsEditingName(true);
-  };
-
-  const handleCancelEdit = () => {
-    setNameInput(profile?.displayName || '');
-    setIsEditingName(false);
   };
 
   const handleSaveName = async () => {
@@ -179,9 +177,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     }
     setSavingName(true);
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        displayName: trimmedName,
-      });
+      await updateDoc(doc(db, 'users', user.uid), { displayName: trimmedName });
       setProfile((prev) => (prev ? { ...prev, displayName: trimmedName } : prev));
       setIsEditingName(false);
     } catch (err) {
@@ -192,68 +188,58 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
   };
 
   const displayNameValue = profile?.displayName?.trim() || '—';
-  const isSaveDisabled =
-    savingName ||
-    !nameInput.trim() ||
-    nameInput.trim() === (profile?.displayName || '').trim();
+  const isSaveDisabled = savingName || !nameInput.trim() || nameInput.trim() === (profile?.displayName || '').trim();
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.email}>{user.email}</Text>
+
+        <View style={styles.card}>
+          <View style={styles.settingRow}>
+            <View>
+              <Text style={styles.sectionLabel}>Dark Mode</Text>
+              <Text style={styles.settingHint}>Switch the app between light and dark themes.</Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: theme.border, true: theme.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>Display Name</Text>
           {loading ? (
-            <ActivityIndicator color={colors.primary} />
+            <ActivityIndicator color={theme.primary} />
           ) : isEditingName ? (
             <>
-              <TextInput
-                style={styles.nameInput}
-                value={nameInput}
-                onChangeText={setNameInput}
-                placeholder="Enter display name"
-                autoCapitalize="words"
-                autoCorrect={false}
-                editable={!savingName}
-              />
+              <Input value={nameInput} onChangeText={setNameInput} placeholder="Enter display name" />
               <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={[styles.primaryButton, isSaveDisabled && styles.buttonDisabled]}
-                  onPress={handleSaveName}
-                  disabled={isSaveDisabled}
-                >
-                  {savingName ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>Save</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={handleCancelEdit}
-                  disabled={savingName}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </TouchableOpacity>
+                <Button label="Save" onPress={handleSaveName} loading={savingName} disabled={isSaveDisabled} style={styles.flexButton} />
+                <Button label="Cancel" onPress={() => setIsEditingName(false)} variant="secondary" style={styles.flexButton} />
               </View>
             </>
           ) : (
             <>
               <Text style={styles.sectionValue}>{displayNameValue}</Text>
-              <TouchableOpacity style={styles.linkButton} onPress={handleEditName}>
+              <TouchableOpacity style={styles.linkButton} onPress={() => setIsEditingName(true)}>
                 <Text style={styles.linkButtonText}>Edit Name</Text>
               </TouchableOpacity>
             </>
           )}
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>
+
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>Created</Text>
-          {loading ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <Text style={styles.sectionValue}>{createdAtText}</Text>
-          )}
+          {loading ? <ActivityIndicator color={theme.primary} /> : <Text style={styles.sectionValue}>{createdAtText}</Text>}
         </View>
 
         <View style={styles.card}>
@@ -261,7 +247,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
           {!familyId ? (
             <Text style={styles.emptyText}>No family found for your account.</Text>
           ) : membersLoading ? (
-            <ActivityIndicator color={colors.primary} />
+            <ActivityIndicator color={theme.primary} />
           ) : (
             <View style={styles.memberList}>
               {familyMembers.map((member) => {
@@ -289,12 +275,8 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
               <Text style={styles.codeText}>{familyId}</Text>
             </View>
             <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleCopy}>
-                <Text style={styles.primaryButtonText}>Copy Code</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleShare}>
-                <Text style={styles.secondaryButtonText}>Share Code</Text>
-              </TouchableOpacity>
+              <Button label="Copy Code" onPress={handleCopy} style={styles.flexButton} />
+              <Button label="Share Code" onPress={handleShare} variant="secondary" style={styles.flexButton} />
             </View>
             <TouchableOpacity style={styles.linkButton} onPress={handleViewAlbums}>
               <Text style={styles.linkButtonText}>Go to Albums</Text>
@@ -302,157 +284,62 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
           </View>
         ) : null}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
+        <Button label="Log Out" onPress={handleLogout} variant="secondary" />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
-    justifyContent: 'space-between',
-    backgroundColor: colors.background,
-  },
-  email: {
-    ...typography.title,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    color: colors.textPrimary,
-  },
-  card: {
-    padding: spacing.xl,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    ...shadow,
-    marginBottom: spacing.lg,
-  },
-  sectionLabel: {
-    ...typography.small,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  sectionValue: {
-    fontSize: typography.heading.fontSize,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  nameInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
-  },
-  codeBox: {
-    marginTop: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  codeText: {
-    fontSize: typography.body.fontSize + 2,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    ...shadow,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: typography.body.fontSize + 1,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    marginLeft: spacing.sm,
-  },
-  secondaryButtonText: {
-    color: colors.primary,
-    fontSize: typography.body.fontSize + 1,
-    fontWeight: '700',
-  },
-  linkButton: {
-    marginTop: spacing.md,
-    alignItems: 'center',
-  },
-  linkButtonText: {
-    color: colors.primary,
-    fontSize: typography.body.fontSize + 1,
-    fontWeight: '700',
-  },
-  memberList: {
-    marginTop: spacing.sm,
-    gap: spacing.sm,
-  },
-  memberRow: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
-  },
-  memberName: {
-    fontSize: typography.body.fontSize + 1,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  memberEmail: {
-    marginTop: spacing.xs,
-    fontSize: typography.small.fontSize,
-    color: colors.textSecondary,
-  },
-  emptyText: {
-    marginTop: spacing.sm,
-    fontSize: typography.body.fontSize,
-    color: colors.textSecondary,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  error: {
-    marginTop: spacing.sm,
-    color: colors.textSecondary,
-    fontSize: typography.body.fontSize,
-  },
-  logoutButton: {
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-  },
-  logoutText: {
-    color: colors.textPrimary,
-    fontSize: typography.body.fontSize + 2,
-    fontWeight: '700',
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    container: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xl,
+      backgroundColor: theme.background,
+      gap: spacing.md,
+      paddingBottom: spacing.xxl,
+    },
+    email: {
+      ...typography.title,
+      textAlign: 'center',
+      color: theme.text,
+    },
+    card: {
+      padding: spacing.lg,
+      borderRadius: radius.lg,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      ...shadow,
+    },
+    sectionLabel: { ...typography.small, color: theme.secondaryText, marginBottom: spacing.xs },
+    settingHint: { color: theme.secondaryText, fontSize: typography.small.fontSize },
+    settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
+    sectionValue: { fontSize: typography.heading.fontSize, fontWeight: '600', color: theme.text },
+    codeBox: {
+      marginTop: spacing.sm,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.inputBackground,
+    },
+    codeText: { fontSize: typography.body.fontSize + 2, fontWeight: '600', color: theme.text, letterSpacing: 0.5 },
+    actionsRow: { flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm },
+    flexButton: { flex: 1 },
+    linkButton: { marginTop: spacing.md, alignItems: 'center' },
+    linkButtonText: { color: theme.primary, fontSize: typography.body.fontSize + 1, fontWeight: '700' },
+    memberList: { marginTop: spacing.sm, gap: spacing.sm },
+    memberRow: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      backgroundColor: theme.inputBackground,
+    },
+    memberName: { fontSize: typography.body.fontSize + 1, fontWeight: '600', color: theme.text },
+    memberEmail: { marginTop: spacing.xs, fontSize: typography.small.fontSize, color: theme.secondaryText },
+    emptyText: { marginTop: spacing.sm, fontSize: typography.body.fontSize, color: theme.secondaryText },
+    error: { marginTop: spacing.sm, color: theme.error, fontSize: typography.body.fontSize },
+  })
+);

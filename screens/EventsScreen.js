@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 import {
   SafeAreaView,
   View,
@@ -9,12 +9,14 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
-} from "react-native";
-import { collection, doc, getDoc, onSnapshot, orderBy, query } from "firebase/firestore";
-import { auth, db } from "../firebaseConfig";
-import { colors, radius, shadow, spacing, typography } from "../src/theme";
+} from 'react-native';
+import { auth } from '../firebaseConfig';
+import { getUserFamilyId, subscribeToEvents } from '../services/eventService';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function EventsScreen({ navigation }) {
+  const { theme } = useAppTheme();
+  const styles = useStyles();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [familyId, setFamilyId] = useState(null);
@@ -22,11 +24,24 @@ export default function EventsScreen({ navigation }) {
 
   const user = auth.currentUser;
 
-  const toValidDate = (value) => {
-    if (!value) return null;
-    const date = value?.toDate ? value.toDate() : value instanceof Date ? value : new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
+  const formattedEvents = useMemo(
+    () =>
+      events.map((event) => {
+        const date = event?.date?.toDate ? event.date.toDate() : event.date instanceof Date ? event.date : new Date(event.date);
+        const isValidDate = !Number.isNaN(date?.getTime?.());
+        return {
+          ...event,
+          formattedDate: isValidDate
+            ? date.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })
+            : '—',
+        };
+      }),
+    [events]
+  );
 
   useEffect(() => {
     const fetchFamily = async () => {
@@ -37,12 +52,10 @@ export default function EventsScreen({ navigation }) {
         return;
       }
       try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        const familyValue = snap.exists() ? snap.data()?.familyId : null;
+        const familyValue = await getUserFamilyId(user.uid);
         setFamilyId(familyValue || null);
-        console.log("[Events] Family loaded:", familyValue || null);
       } catch (error) {
-        console.error("Error fetching family", error);
+        console.error('[EventsScreen] Error fetching family', error);
       } finally {
         setFamilyLoading(false);
       }
@@ -57,57 +70,34 @@ export default function EventsScreen({ navigation }) {
       return;
     }
 
-    // Bug fix: events are scoped to families, not a global collection.
     setLoading(true);
-    const eventsRef = collection(db, "families", familyId, "events");
-    const q = query(eventsRef, orderBy("date", "asc"));
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        setEvents(data);
+    const unsubscribe = subscribeToEvents({
+      familyId,
+      onData: (nextEvents) => {
+        setEvents(nextEvents);
         setLoading(false);
-        console.log("[Events] Snapshot received:", data.length);
       },
-      (error) => {
-        console.error("Error fetching events", error);
+      onError: (error) => {
+        console.error('[EventsScreen] Error fetching events', error);
+        setEvents([]);
         setLoading(false);
-      }
-    );
+      },
+    });
 
     return unsubscribe;
   }, [user, familyId]);
 
-  const formattedEvents = events.map((event) => {
-    const dateValue = toValidDate(event?.date);
-
-    return {
-      ...event,
-      formattedDate: dateValue
-        ? dateValue.toLocaleDateString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })
-        : "—",
-    };
-  });
-
   const handleAddEvent = () => {
     if (!user) {
-      Alert.alert("Not signed in", "You need to be signed in to create events.");
+      Alert.alert('Not signed in', 'You need to be signed in to create events.');
       return;
     }
-    navigation.navigate("AddEvent");
+    navigation.navigate('AddEvent');
   };
 
   const renderItem = ({ item }) => (
     <Pressable
-      onPress={() => navigation.navigate("EventDetails", { event: item, familyId })}
+      onPress={() => navigation.navigate('EventDetails', { event: item, familyId })}
       accessibilityRole="button"
       accessibilityLabel={`Open event ${item.title}`}
       style={({ pressed }) => [styles.eventItem, pressed && styles.eventItemPressed]}
@@ -134,7 +124,7 @@ export default function EventsScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -154,9 +144,8 @@ export default function EventsScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>Events</Text>
-
         {loading ? (
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         ) : (
           <FlatList
             data={formattedEvents}
@@ -164,22 +153,12 @@ export default function EventsScreen({ navigation }) {
             renderItem={renderItem}
             ListEmptyComponent={
               <View style={styles.centerContent}>
-                <Text style={styles.infoText}>
-                  No events yet — tap + to add one!
-                </Text>
+                <Text style={styles.infoText}>No events yet. Tap + to add one.</Text>
               </View>
             }
           />
         )}
-
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleAddEvent}
-          accessibilityRole="button"
-          accessibilityLabel="Add event"
-          accessibilityHint="Create a new event"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+        <TouchableOpacity style={styles.fab} onPress={handleAddEvent}>
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -187,78 +166,42 @@ export default function EventsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    padding: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  title: {
-    ...typography.title,
-    marginBottom: spacing.lg,
-    color: colors.textPrimary,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  infoText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  eventItem: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radius.md,
-    marginBottom: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    ...shadow,
-  },
-  eventItemPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
-  },
-  eventInfo: {
-    flex: 1,
-  },
-  eventTitle: {
-    ...typography.heading,
-    marginBottom: spacing.xs,
-    color: colors.textPrimary,
-  },
-  eventDate: {
-    fontSize: typography.body.fontSize,
-    color: colors.textSecondary,
-  },
-  chevron: {
-    fontSize: 22,
-    color: colors.textSecondary,
-    marginLeft: spacing.md,
-  },
-  fab: {
-    position: "absolute",
-    right: spacing.xl,
-    bottom: spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    ...shadow,
-  },
-  fabText: {
-    color: "#fff",
-    fontSize: 32,
-    textAlign: "center",
-    marginTop: -2,
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    container: { flex: 1, padding: spacing.lg, backgroundColor: theme.background },
+    title: { ...typography.title, marginBottom: spacing.lg, color: theme.text },
+    centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center' },
+    eventItem: {
+      backgroundColor: theme.card,
+      padding: spacing.lg,
+      borderRadius: radius.md,
+      marginBottom: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderColor: theme.border,
+      ...shadow,
+    },
+    eventItemPressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
+    eventInfo: { flex: 1 },
+    eventTitle: { ...typography.heading, marginBottom: spacing.xs, color: theme.text },
+    eventDate: { fontSize: typography.body.fontSize, color: theme.secondaryText },
+    chevron: { fontSize: 22, color: theme.secondaryText, marginLeft: spacing.md },
+    fab: {
+      position: 'absolute',
+      right: spacing.lg,
+      bottom: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadow,
+    },
+    fabText: { color: '#fff', fontSize: 32, textAlign: 'center', marginTop: -2 },
+  })
+);

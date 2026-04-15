@@ -1,19 +1,13 @@
 import { useState } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View, Alert } from 'react-native';
 import { arrayUnion, collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
-import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import Button from '../src/components/Button';
+import Input from '../src/components/Input';
+import { createThemedStyles, spacing, typography } from '../src/theme';
 
 export default function FamilySetupScreen({ navigation }) {
+  const styles = useStyles();
   const [familyCode, setFamilyCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -99,120 +93,62 @@ export default function FamilySetupScreen({ navigation }) {
       <View style={styles.container}>
         <Text style={styles.title}>Join or Create a Family</Text>
         <View style={styles.card}>
-          <Text style={styles.label}>Family Code</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Family Code"
             placeholder="Enter family code"
             value={familyCode}
             onChangeText={setFamilyCode}
             autoCapitalize="none"
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <TouchableOpacity
-            style={[styles.button, loading && styles.disabled]}
-            onPress={handleJoinFamily}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Join Family</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.secondaryButton, loading && styles.disabled]}
-            onPress={handleCreateFamily}
-            disabled={loading}
-          >
-            <Text style={styles.secondaryButtonText}>Create New Family</Text>
-          </TouchableOpacity>
+          <Button label="Join Family" onPress={handleJoinFamily} loading={loading} disabled={loading} />
+          <Button label="Create New Family" onPress={handleCreateFamily} disabled={loading} variant="secondary" />
         </View>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    padding: spacing.xl,
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  title: {
-    ...typography.title,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    color: colors.textPrimary,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    ...shadow,
-  },
-  label: {
-    fontSize: typography.body.fontSize,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.sm,
-  },
-  button: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    ...shadow,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: typography.body.fontSize + 1,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    marginTop: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  secondaryButtonText: {
-    color: colors.primary,
-    fontSize: typography.body.fontSize + 1,
-    fontWeight: '700',
-  },
-  error: {
-    color: colors.textSecondary,
-    fontSize: typography.small.fontSize,
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  infoText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      flex: 1,
+      padding: spacing.lg,
+      justifyContent: 'center',
+      backgroundColor: theme.background,
+    },
+    title: {
+      ...typography.title,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+      color: theme.text,
+    },
+    card: {
+      backgroundColor: theme.card,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      gap: spacing.md,
+      ...shadow,
+    },
+    error: {
+      color: theme.error,
+      fontSize: typography.small.fontSize,
+    },
+    centerContent: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+      backgroundColor: theme.background,
+    },
+    infoText: {
+      fontSize: typography.body.fontSize + 1,
+      color: theme.secondaryText,
+      textAlign: 'center',
+    },
+  })
+);

@@ -1,19 +1,15 @@
 import { useCallback, useState } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
-import ActionButton from '../src/components/ActionButton';
-import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import Button from '../src/components/Button';
+import Input from '../src/components/Input';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function SignupScreen({ navigation }) {
+  const { theme } = useAppTheme();
+  const styles = useStyles();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,8 +41,8 @@ export default function SignupScreen({ navigation }) {
       } else {
         navigation.replace('FamilySetup');
       }
-    } catch (error) {
-      setError(error.message);
+    } catch (signupError) {
+      setError(signupError.message);
     } finally {
       setLoading(false);
     }
@@ -58,57 +54,47 @@ export default function SignupScreen({ navigation }) {
         <Text style={styles.brand}>JA HOMEHUB</Text>
         <View style={styles.card}>
           <Text style={styles.title}>Create account</Text>
-          <View style={styles.field}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Your full name"
-              value={name}
-              onChangeText={setName}
-              textContentType="name"
-              autoComplete="name"
-              returnKeyType="next"
-            />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="name@example.com"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              keyboardType="email-address"
-              returnKeyType="next"
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Create a password"
-              secureTextEntry
-              autoComplete="password"
-              textContentType="newPassword"
-              returnKeyType="done"
-              value={password}
-              onChangeText={setPassword}
-              onSubmitEditing={handleSignup}
-            />
-          </View>
+          <Input
+            label="Full Name"
+            placeholder="Your full name"
+            value={name}
+            onChangeText={setName}
+            textContentType="name"
+            autoComplete="name"
+            returnKeyType="next"
+          />
+          <Input
+            label="Email"
+            placeholder="name@example.com"
+            autoCapitalize="none"
+            autoComplete="email"
+            textContentType="emailAddress"
+            keyboardType="email-address"
+            returnKeyType="next"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <Input
+            label="Password"
+            placeholder="Create a password"
+            secureTextEntry
+            autoComplete="password"
+            textContentType="newPassword"
+            returnKeyType="done"
+            value={password}
+            onChangeText={setPassword}
+            onSubmitEditing={handleSignup}
+          />
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <ActionButton
-            label={loading ? 'Creating account…' : 'Sign up'}
+          <Button
+            label={loading ? 'Creating account...' : 'Sign up'}
             onPress={handleSignup}
             loading={loading}
             disabled={loading}
             accessibilityHint="Create your account"
-            style={styles.primaryButton}
           />
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.goBack()}>
-            <Text style={styles.linkText}>Already have an account? Log in</Text>
+            <Text style={[styles.linkText, { color: theme.primary }]}>Already have an account? Log in</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -116,69 +102,50 @@ export default function SignupScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
-    justifyContent: 'center',
-  },
-  brand: {
-    fontSize: typography.title.fontSize + 4,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    color: colors.textPrimary,
-  },
-  title: {
-    ...typography.heading,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    color: colors.textPrimary,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    ...shadow,
-  },
-  field: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    fontSize: typography.body.fontSize,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xs,
-    fontSize: typography.body.fontSize + 2,
-    backgroundColor: colors.surface,
-  },
-  error: {
-    color: colors.error,
-    fontSize: typography.small.fontSize,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  linkRow: {
-    marginTop: spacing.md,
-    alignItems: 'center',
-  },
-  linkText: {
-    color: colors.primary,
-    fontSize: typography.body.fontSize + 1,
-  },
-  primaryButton: {
-    marginTop: spacing.xs,
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xl,
+      justifyContent: 'center',
+    },
+    brand: {
+      fontSize: typography.title.fontSize + 6,
+      fontWeight: '800',
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+      color: theme.text,
+    },
+    title: {
+      ...typography.heading,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+      color: theme.text,
+    },
+    card: {
+      backgroundColor: theme.card,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      gap: spacing.md,
+      ...shadow,
+    },
+    error: {
+      color: theme.error,
+      fontSize: typography.small.fontSize,
+      textAlign: 'center',
+    },
+    linkRow: {
+      marginTop: spacing.sm,
+      alignItems: 'center',
+    },
+    linkText: {
+      fontSize: typography.body.fontSize + 1,
+    },
+  })
+);

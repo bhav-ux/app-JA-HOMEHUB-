@@ -4,10 +4,12 @@ import { Calendar } from 'react-native-calendars';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { auth, db } from '../firebaseConfig';
-import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 import { deleteCalendarEvent } from '../utils/delete';
 
 export default function CalendarScreen({ navigation }) {
+  const { theme } = useAppTheme();
+  const styles = useStyles();
   const [events, setEvents] = useState([]);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,28 +50,17 @@ export default function CalendarScreen({ navigation }) {
       return;
     }
 
-    let eventsUnsubscribe;
-    let notesUnsubscribe;
     let eventsLoaded = false;
     let notesLoaded = false;
-
     const checkLoading = () => {
-      if (eventsLoaded && notesLoaded) {
-        setLoading(false);
-      }
+      if (eventsLoaded && notesLoaded) setLoading(false);
     };
 
     setLoading(true);
-    const eventsRef = collection(db, 'families', familyId, 'events');
-    const eventsQuery = query(eventsRef, orderBy('date', 'asc'));
-    eventsUnsubscribe = onSnapshot(
-      eventsQuery,
+    const eventsUnsubscribe = onSnapshot(
+      query(collection(db, 'families', familyId, 'events'), orderBy('date', 'asc')),
       (snapshot) => {
-        const data = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        setEvents(data);
+        setEvents(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
         eventsLoaded = true;
         checkLoading();
       },
@@ -80,16 +71,10 @@ export default function CalendarScreen({ navigation }) {
       }
     );
 
-    const notesRef = collection(db, 'families', familyId, 'notes');
-    const notesQuery = query(notesRef, orderBy('date', 'asc'));
-    notesUnsubscribe = onSnapshot(
-      notesQuery,
+    const notesUnsubscribe = onSnapshot(
+      query(collection(db, 'families', familyId, 'notes'), orderBy('date', 'asc')),
       (snapshot) => {
-        const data = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        setNotes(data);
+        setNotes(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
         notesLoaded = true;
         checkLoading();
       },
@@ -101,43 +86,33 @@ export default function CalendarScreen({ navigation }) {
     );
 
     return () => {
-      if (eventsUnsubscribe) eventsUnsubscribe();
-      if (notesUnsubscribe) notesUnsubscribe();
+      eventsUnsubscribe();
+      notesUnsubscribe();
     };
   }, [user, familyId]);
 
   const markedDates = useMemo(() => {
     const marked = {};
-    
-    // Add events with blue dots
+
     events.forEach((event) => {
       const dateValue = toValidDate(event.date);
       if (!dateValue) return;
       const dateKey = format(dateValue, 'yyyy-MM-dd');
-
       if (!marked[dateKey]) {
-        marked[dateKey] = {
-          marked: true,
-          dots: [{ color: colors.primary }],
-        };
+        marked[dateKey] = { marked: true, dots: [{ color: theme.primary }] };
       } else {
-        marked[dateKey].dots.push({ color: colors.primary });
+        marked[dateKey].dots.push({ color: theme.primary });
       }
     });
 
-    // Add notes with green dots
     notes.forEach((note) => {
       const dateValue = toValidDate(note.date);
       if (!dateValue) return;
       const dateKey = format(dateValue, 'yyyy-MM-dd');
-
       if (!marked[dateKey]) {
-        marked[dateKey] = {
-          marked: true,
-          dots: [{ color: colors.textSecondary }],
-        };
+        marked[dateKey] = { marked: true, dots: [{ color: theme.secondaryText }] };
       } else {
-        marked[dateKey].dots.push({ color: colors.textSecondary });
+        marked[dateKey].dots.push({ color: theme.secondaryText });
       }
     });
 
@@ -145,32 +120,30 @@ export default function CalendarScreen({ navigation }) {
       marked[selectedDate] = {
         ...marked[selectedDate],
         selected: true,
-        selectedColor: colors.primary,
+        selectedColor: theme.primary,
       };
     }
 
     return marked;
-  }, [events, notes, selectedDate]);
+  }, [events, notes, selectedDate, theme.primary, theme.secondaryText]);
 
-  const selectedDateEvents = useMemo(() => {
-    if (!selectedDate) return [];
+  const selectedDateEvents = useMemo(
+    () =>
+      events.filter((event) => {
+        const eventValue = toValidDate(event.date);
+        return eventValue && format(eventValue, 'yyyy-MM-dd') === selectedDate;
+      }),
+    [events, selectedDate]
+  );
 
-    return events.filter((event) => {
-      const eventValue = toValidDate(event.date);
-      if (!eventValue) return false;
-      return format(eventValue, 'yyyy-MM-dd') === selectedDate;
-    });
-  }, [events, selectedDate]);
-
-  const selectedDateNotes = useMemo(() => {
-    if (!selectedDate) return [];
-
-    return notes.filter((note) => {
-      const noteValue = toValidDate(note.date);
-      if (!noteValue) return false;
-      return format(noteValue, 'yyyy-MM-dd') === selectedDate;
-    });
-  }, [notes, selectedDate]);
+  const selectedDateNotes = useMemo(
+    () =>
+      notes.filter((note) => {
+        const noteValue = toValidDate(note.date);
+        return noteValue && format(noteValue, 'yyyy-MM-dd') === selectedDate;
+      }),
+    [notes, selectedDate]
+  );
 
   const handleAddNote = () => {
     if (!user) {
@@ -184,12 +157,6 @@ export default function CalendarScreen({ navigation }) {
     navigation.navigate('AddCalendarNote');
   };
 
-  const formatEventTime = (eventDate) => {
-    const date = toValidDate(eventDate);
-    if (!date) return '—';
-    return format(date, 'h:mm a');
-  };
-
   const handleDeleteCalendarEvent = (eventItem) => {
     if (!user || !familyId || !eventItem?.id) return;
     Alert.alert('Delete Event', 'Are you sure you want to delete this?', [
@@ -199,14 +166,28 @@ export default function CalendarScreen({ navigation }) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteCalendarEvent({
-              familyId,
-              eventId: eventItem.id,
-              currentUser: user,
-            });
+            await deleteCalendarEvent({ familyId, eventId: eventItem.id, currentUser: user });
           } catch (error) {
             console.error('Failed to delete calendar event', error);
             Alert.alert('Not allowed', error.message || 'You can only delete your own events');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleNoteLongPress = (note) => {
+    if (!user || !note?.createdBy || note.createdBy !== user.uid || !familyId) return;
+    Alert.alert('Delete Note?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteDoc(doc(db, 'families', familyId, 'notes', note.id));
+          } catch (error) {
+            console.error('Failed to delete note', error);
           }
         },
       },
@@ -218,20 +199,15 @@ export default function CalendarScreen({ navigation }) {
     return (
       <View style={styles.eventCard}>
         <View style={styles.eventTimeContainer}>
-          <Text style={styles.eventTime}>{formatEventTime(item.date)}</Text>
+          <Text style={styles.eventTime}>
+            {toValidDate(item.date) ? format(toValidDate(item.date), 'h:mm a') : '—'}
+          </Text>
         </View>
         <View style={styles.eventContent}>
           <View style={styles.eventHeaderRow}>
             <Text style={styles.eventTitle}>{item.title}</Text>
             {canDelete ? (
-              <TouchableOpacity
-                onPress={() => handleDeleteCalendarEvent(item)}
-                accessibilityRole="button"
-                accessibilityLabel="Delete event"
-                accessibilityHint="Remove this event"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.deleteButton}
-              >
+              <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteCalendarEvent(item)}>
                 <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
             ) : null}
@@ -240,27 +216,6 @@ export default function CalendarScreen({ navigation }) {
         </View>
       </View>
     );
-  };
-
-  const handleNoteLongPress = (note) => {
-    if (!user || !note?.createdBy || note.createdBy !== user.uid || !familyId) {
-      return;
-    }
-    Alert.alert('Delete Note?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            // Bug fix: notes live under the family collection, not a global path.
-            await deleteDoc(doc(db, 'families', familyId, 'notes', note.id));
-          } catch (error) {
-            console.error('Failed to delete note', error);
-          }
-        },
-      },
-    ]);
   };
 
   const renderNoteItem = ({ item }) => (
@@ -287,7 +242,7 @@ export default function CalendarScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -308,7 +263,7 @@ export default function CalendarScreen({ navigation }) {
       <View style={styles.container}>
         <Text style={styles.title}>Calendar</Text>
         {loading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+          <ActivityIndicator size="large" color={theme.primary} style={styles.loader} />
         ) : (
           <>
             <Calendar
@@ -317,15 +272,15 @@ export default function CalendarScreen({ navigation }) {
               markedDates={markedDates}
               markingType="multi-dot"
               theme={{
-                todayTextColor: colors.primary,
-                arrowColor: colors.primary,
-                selectedDayBackgroundColor: colors.primary,
+                todayTextColor: theme.primary,
+                arrowColor: theme.primary,
+                selectedDayBackgroundColor: theme.primary,
                 selectedDayTextColor: '#fff',
-                calendarBackground: colors.surface,
-                monthTextColor: colors.textPrimary,
+                calendarBackground: theme.card,
+                monthTextColor: theme.text,
                 textMonthFontWeight: '700',
-                textDayStyle: { color: colors.textPrimary },
-                textSectionTitleColor: colors.textSecondary,
+                textDayStyle: { color: theme.text },
+                textSectionTitleColor: theme.secondaryText,
                 textDayFontSize: 16,
                 textMonthFontSize: 18,
                 textDayHeaderFontSize: 14,
@@ -333,57 +288,29 @@ export default function CalendarScreen({ navigation }) {
               style={styles.calendar}
             />
             <View style={styles.eventsSection}>
-              <Text style={styles.dateTitle}>
-                {selectedDateValue ? format(selectedDateValue, 'MMM d, yyyy') : 'Invalid date'}
-              </Text>
-              
-              {selectedDateEvents.length > 0 && (
-                <>
-                  <Text style={styles.sectionTitle}>
-                    Events ({selectedDateEvents.length})
-                  </Text>
-                  <FlatList
-                    data={selectedDateEvents}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderEventItem}
-                    contentContainerStyle={styles.eventsList}
-                    scrollEnabled={false}
-                  />
-                </>
-              )}
+              <Text style={styles.dateTitle}>{selectedDateValue ? format(selectedDateValue, 'MMM d, yyyy') : 'Invalid date'}</Text>
 
-              {selectedDateNotes.length > 0 && (
+              {selectedDateEvents.length > 0 ? (
                 <>
-                  <Text
-                    style={[
-                      styles.sectionTitle,
-                      { marginTop: selectedDateEvents.length > 0 ? spacing.lg : 0 },
-                    ]}
-                  >
+                  <Text style={styles.sectionTitle}>Events ({selectedDateEvents.length})</Text>
+                  <FlatList data={selectedDateEvents} keyExtractor={(item) => item.id} renderItem={renderEventItem} contentContainerStyle={styles.eventsList} scrollEnabled={false} />
+                </>
+              ) : null}
+
+              {selectedDateNotes.length > 0 ? (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: selectedDateEvents.length > 0 ? spacing.lg : 0 }]}>
                     Notes ({selectedDateNotes.length})
                   </Text>
-                  <FlatList
-                    data={selectedDateNotes}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderNoteItem}
-                    contentContainerStyle={styles.notesList}
-                    scrollEnabled={false}
-                  />
+                  <FlatList data={selectedDateNotes} keyExtractor={(item) => item.id} renderItem={renderNoteItem} contentContainerStyle={styles.notesList} scrollEnabled={false} />
                 </>
-              )}
+              ) : null}
 
-              {selectedDateEvents.length === 0 && selectedDateNotes.length === 0 && (
+              {selectedDateEvents.length === 0 && selectedDateNotes.length === 0 ? (
                 <Text style={styles.emptyText}>No events or notes on this date</Text>
-              )}
+              ) : null}
             </View>
-            <TouchableOpacity
-              style={styles.fab}
-              onPress={handleAddNote}
-              accessibilityRole="button"
-              accessibilityLabel="Add calendar note"
-              accessibilityHint="Create a new calendar note"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
+            <TouchableOpacity style={styles.fab} onPress={handleAddNote}>
               <Text style={styles.fabText}>+</Text>
             </TouchableOpacity>
           </>
@@ -393,152 +320,92 @@ export default function CalendarScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  title: {
-    ...typography.title,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    color: colors.textPrimary,
-  },
-  loader: {
-    marginTop: spacing.xl,
-  },
-  calendar: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.surface,
-  },
-  eventsSection: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  dateTitle: {
-    fontSize: typography.heading.fontSize + 2,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    ...typography.heading,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  eventsList: {
-    paddingBottom: spacing.xxl,
-  },
-  notesList: {
-    paddingBottom: spacing.xxl,
-  },
-  emptyText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.lg,
-  },
-  eventCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadow,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
-  eventTimeContainer: {
-    marginRight: spacing.md,
-    minWidth: 70,
-  },
-  eventTime: {
-    fontSize: typography.body.fontSize + 1,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  eventContent: {
-    flex: 1,
-  },
-  eventHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  eventTitle: {
-    ...typography.heading,
-    color: colors.textPrimary,
-  },
-  deleteText: {
-    color: colors.error,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  deleteButton: {
-    minHeight: 32,
-    minWidth: 44,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.error,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eventDescription: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  noteCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadow,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.textSecondary,
-  },
-  noteTitle: {
-    ...typography.heading,
-    color: colors.textPrimary,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow,
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 32,
-    marginTop: -4,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  infoText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    container: { flex: 1, backgroundColor: theme.background },
+    title: {
+      ...typography.title,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
+      color: theme.text,
+    },
+    loader: { marginTop: spacing.xl },
+    calendar: {
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      paddingBottom: spacing.sm,
+      backgroundColor: theme.card,
+    },
+    eventsSection: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    dateTitle: { fontSize: typography.heading.fontSize + 2, fontWeight: '700', color: theme.text, marginBottom: spacing.md },
+    sectionTitle: { ...typography.heading, color: theme.secondaryText, marginBottom: spacing.sm },
+    eventsList: { paddingBottom: spacing.xl },
+    notesList: { paddingBottom: spacing.xl },
+    emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', marginTop: spacing.lg },
+    eventCard: {
+      flexDirection: 'row',
+      backgroundColor: theme.card,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.primary,
+      ...shadow,
+    },
+    eventTimeContainer: { marginRight: spacing.md, minWidth: 70 },
+    eventTime: { fontSize: typography.body.fontSize + 1, fontWeight: '700', color: theme.primary },
+    eventContent: { flex: 1 },
+    eventHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+    eventTitle: { ...typography.heading, color: theme.text },
+    deleteText: { color: theme.error, fontSize: 13, fontWeight: '700' },
+    deleteButton: {
+      minHeight: 32,
+      minWidth: 44,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: theme.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    eventDescription: { ...typography.body, color: theme.secondaryText, marginTop: spacing.xs },
+    noteCard: {
+      backgroundColor: theme.card,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.secondaryText,
+      ...shadow,
+    },
+    noteTitle: { ...typography.heading, color: theme.text },
+    fab: {
+      position: 'absolute',
+      bottom: spacing.lg,
+      right: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...shadow,
+    },
+    fabText: { color: '#fff', fontSize: 32, marginTop: -4 },
+    centerContent: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+      backgroundColor: theme.background,
+    },
+    infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center' },
+  })
+);

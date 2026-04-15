@@ -1,21 +1,14 @@
 import { useCallback, useState } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { SafeAreaView, View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
-import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import Button from '../src/components/Button';
+import Input from '../src/components/Input';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function CreateAlbumScreen({ navigation, route, familyId: familyIdProp }) {
+  const { theme } = useAppTheme();
+  const styles = useStyles();
   const [albumName, setAlbumName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -63,101 +56,55 @@ export default function CreateAlbumScreen({ navigation, route, familyId: familyI
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.header}>Create Album</Text>
-          <View style={styles.field}>
-            <Text style={styles.label}>Album Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter album name"
-              value={albumName}
-              onChangeText={setAlbumName}
-              autoFocus
-            />
-          </View>
+          <Input
+            label="Album Name"
+            placeholder="Enter album name"
+            value={albumName}
+            onChangeText={setAlbumName}
+            autoFocus
+          />
         </ScrollView>
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.saveButton, (!albumName.trim() || saving) && styles.disabled]}
-            onPress={handleSave}
-            disabled={!albumName.trim() || saving}
-            accessibilityRole="button"
-            accessibilityLabel="Save album"
-          >
-            <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save'}</Text>
-          </TouchableOpacity>
+          <Button label={saving ? 'Saving...' : 'Save'} onPress={handleSave} loading={saving} disabled={!albumName.trim() || saving} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxl + spacing.xl,
-    gap: spacing.lg,
-  },
-  header: {
-    ...typography.title,
-    textAlign: 'center',
-    color: colors.textPrimary,
-  },
-  field: {
-    gap: spacing.sm,
-  },
-  label: {
-    fontSize: typography.body.fontSize,
-    color: colors.textSecondary,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xs,
-    fontSize: typography.body.fontSize + 2,
-    backgroundColor: colors.surface,
-  },
-  footer: {
-    padding: spacing.xl,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    ...shadow,
-  },
-  saveText: {
-    color: '#fff',
-    fontSize: typography.body.fontSize + 2,
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  infoText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+const useStyles = createThemedStyles(({ theme }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    container: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxl,
+      gap: spacing.lg,
+    },
+    header: {
+      ...typography.title,
+      textAlign: 'center',
+      color: theme.text,
+    },
+    footer: {
+      padding: spacing.lg,
+      borderTopWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    centerContent: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    infoText: {
+      fontSize: typography.body.fontSize + 1,
+      color: theme.secondaryText,
+      textAlign: 'center',
+    },
+  })
+);

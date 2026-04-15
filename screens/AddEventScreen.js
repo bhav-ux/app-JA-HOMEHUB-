@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   StyleSheet,
   Platform,
-} from "react-native";
-import RNDateTimePicker from "@react-native-community/datetimepicker";
-import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../firebaseConfig";
-import { colors, radius, shadow, spacing, typography } from "../src/theme";
+} from 'react-native';
+import RNDateTimePicker from '@react-native-community/datetimepicker';
+import { auth } from '../firebaseConfig';
+import Button from '../src/components/Button';
+import Input from '../src/components/Input';
+import { createEvent as createEventRecord, getUserFamilyId } from '../services/eventService';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function AddEventScreen({ navigation }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const { theme } = useAppTheme();
+  const styles = useStyles();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [familyId, setFamilyId] = useState(null);
@@ -29,19 +32,16 @@ export default function AddEventScreen({ navigation }) {
   useEffect(() => {
     const fetchFamily = async () => {
       if (!user) {
-        // Bug fix: ensure the screen doesn't stay stuck in loading when signed out.
         setLoading(false);
         return;
       }
+
       try {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setFamilyId(userSnap.data().familyId || null);
-        }
-        console.log("[AddEvent] Family loaded:", userSnap.exists() ? userSnap.data().familyId || null : null);
+        const nextFamilyId = await getUserFamilyId(user.uid);
+        setFamilyId(nextFamilyId);
       } catch (error) {
-        console.error("Error fetching family", error);
+        console.error('[AddEventScreen] Error fetching family', error);
+        Alert.alert('Unable to load family', 'Please try again in a moment.');
       } finally {
         setLoading(false);
       }
@@ -51,42 +51,42 @@ export default function AddEventScreen({ navigation }) {
   }, [user]);
 
   const onChangeDate = (event, selectedDate) => {
-    if (event.type === "set" && selectedDate) {
+    if (event.type === 'set' && selectedDate) {
       setDate(selectedDate);
     }
-    if (Platform.OS !== "ios") {
+    if (Platform.OS !== 'ios') {
       setShowPicker(false);
     }
   };
 
-  const createEvent = async () => {
+  const handleCreateEvent = async () => {
     if (!user) {
-      Alert.alert("Not signed in", "You need to be signed in to create events.");
+      Alert.alert('Not signed in', 'You need to be signed in to create events.');
       return;
     }
     if (!familyId) {
-      Alert.alert("No family found", "Please complete family setup first.");
+      Alert.alert('No family found', 'Please complete family setup first.');
       return;
     }
     if (!title.trim()) {
-      return Alert.alert("Error", "Event title is required");
+      Alert.alert('Error', 'Event title is required');
+      return;
     }
+
     try {
       setSaving(true);
-      const docRef = await addDoc(collection(db, "families", familyId, "events"), {
-        title: title.trim(),
-        description: description.trim(),
+      await createEventRecord({
+        familyId,
+        title,
+        description,
         date,
         createdBy: user.uid,
         createdByEmail: user.email,
-        createdAt: serverTimestamp(),
       });
-
-      console.log("[AddEvent] Event created:", docRef.id);
       navigation.goBack();
     } catch (err) {
-      console.error("[AddEvent] Failed to save event", err);
-      Alert.alert("Failed to save", err.message);
+      console.error('[AddEventScreen] Failed to save event', err);
+      Alert.alert('Failed to save', err?.message || 'The event could not be saved.');
     } finally {
       setSaving(false);
     }
@@ -95,7 +95,7 @@ export default function AddEventScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.centerPage}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -113,116 +113,69 @@ export default function AddEventScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>Add Event</Text>
-
         <View style={styles.card}>
-          <TextInput
-            style={styles.input}
-            placeholder="Event Title"
-            value={title}
-            onChangeText={setTitle}
-          />
-
-          <TextInput
-            style={[styles.input, styles.textArea]}
+          <Input placeholder="Event Title" value={title} onChangeText={setTitle} />
+          <Input
             placeholder="Description (optional)"
             value={description}
             onChangeText={setDescription}
             multiline
+            inputStyle={styles.textArea}
           />
 
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowPicker(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Select event date"
-          >
+          <TouchableOpacity style={styles.dateButton} onPress={() => setShowPicker(true)}>
+            <Text style={styles.dateLabel}>Event Date</Text>
             <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
           </TouchableOpacity>
 
-          {showPicker && (
-            <RNDateTimePicker
-              mode="date"
-              value={date}
-              display="spinner"
-              onChange={onChangeDate}
-            />
-          )}
+          {showPicker ? (
+            <RNDateTimePicker mode="date" value={date} display="spinner" onChange={onChangeDate} />
+          ) : null}
 
-          <TouchableOpacity
-            style={[styles.addButton, saving && styles.addButtonDisabled]}
-            onPress={createEvent}
-            disabled={saving}
-            accessibilityRole="button"
-            accessibilityLabel="Save event"
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.addButtonText}>Save Event</Text>
-            )}
-          </TouchableOpacity>
+          <Button label={saving ? 'Saving Event...' : 'Save Event'} onPress={handleCreateEvent} loading={saving} disabled={saving} />
         </View>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, padding: spacing.xl },
-  title: {
-    ...typography.title,
-    textAlign: "center",
-    marginBottom: spacing.lg,
-    color: colors.textPrimary,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    ...shadow,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xs,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.sm,
-  },
-  textArea: { height: 96, textAlignVertical: "top" },
-  dateButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-    marginBottom: spacing.sm,
-  },
-  dateText: { color: colors.primary, fontSize: 16, fontWeight: "600" },
-  addButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: "center",
-  },
-  addButtonDisabled: {
-    opacity: 0.7,
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  centerPage: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.background,
-    padding: spacing.lg,
-  },
-  warning: { ...typography.heading, color: colors.textPrimary },
-  secondaryText: { marginTop: spacing.xs + spacing.xs, color: colors.textSecondary },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    container: { flex: 1, padding: spacing.lg },
+    title: {
+      ...typography.title,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+      color: theme.text,
+    },
+    card: {
+      backgroundColor: theme.card,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      gap: spacing.md,
+      ...shadow,
+    },
+    textArea: { height: 96, textAlignVertical: 'top' },
+    dateButton: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.inputBackground,
+      borderRadius: radius.md,
+      gap: spacing.xs,
+    },
+    dateLabel: { color: theme.secondaryText, fontSize: typography.small.fontSize },
+    dateText: { color: theme.primary, fontSize: 16, fontWeight: '600' },
+    centerPage: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.background,
+      padding: spacing.lg,
+    },
+    warning: { ...typography.heading, color: theme.text },
+    secondaryText: { marginTop: spacing.sm, color: theme.secondaryText },
+  })
+);

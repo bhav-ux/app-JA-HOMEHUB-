@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Switch, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -22,17 +22,43 @@ import EventDetailsScreen from './screens/EventDetailsScreen';
 import FamilySetupScreen from './screens/FamilySetupScreen';
 import HomeDashboardScreen from './screens/HomeDashboardScreen';
 import { auth, db } from './firebaseConfig';
+import { ThemeProvider, useTheme } from './theme/ThemeContext';
+import { getNavigationTheme, spacing } from './src/theme';
 import { registerForPushNotificationsAsync } from './utils/notifications';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+function ThemeToggle() {
+  const { theme, isDark, toggleTheme } = useTheme();
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+      <Text style={{ color: theme.secondaryText, fontSize: 12 }}>{isDark ? 'Dark' : 'Light'}</Text>
+      <Switch
+        value={isDark}
+        onValueChange={toggleTheme}
+        trackColor={{ false: theme.border, true: theme.primary }}
+        thumbColor="#FFFFFF"
+      />
+    </View>
+  );
+}
+
 function MainTabs({ familyId, route }) {
+  const { theme } = useTheme();
   const familyIdValue = familyId ?? route?.params?.familyId;
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route: tabRoute }) => ({
         headerShown: false,
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.secondaryText,
+        tabBarStyle: {
+          backgroundColor: theme.tabBarBackground,
+          borderTopColor: theme.border,
+        },
         tabBarIcon: ({ color, size }) => {
           const map = {
             Home: 'home-outline',
@@ -41,7 +67,7 @@ function MainTabs({ familyId, route }) {
             Chat: 'chatbubbles-outline',
             Profile: 'person-circle-outline',
           };
-          const iconName = map[route.name] || 'ellipse-outline';
+          const iconName = map[tabRoute.name] || 'ellipse-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
@@ -54,23 +80,31 @@ function MainTabs({ familyId, route }) {
         {(props) => <AlbumsScreen {...props} familyId={familyIdValue} />}
       </Tab.Screen>
       <Tab.Screen name="Chat" component={ChatScreen} options={{ tabBarLabel: 'Chat' }} />
-      <Tab.Screen name="Profile">
+      <Tab.Screen
+        name="Profile"
+        options={{
+          headerShown: true,
+          headerTitle: 'Profile',
+          headerRight: () => <ThemeToggle />,
+        }}
+      >
         {(props) => <ProfileScreen {...props} familyId={familyIdValue} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
 }
 
-export default function App() {
+function AppNavigator() {
+  const { theme, isDark, isThemeReady } = useTheme();
   const [initialRoute, setInitialRoute] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [familyId, setFamilyId] = useState(null);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (!user) {
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      setUser(nextUser);
+      if (!nextUser) {
         setFamilyId(null);
         setInitialRoute('Login');
         setCheckingAuth(false);
@@ -78,11 +112,12 @@ export default function App() {
       }
 
       try {
-        const snap = await getDoc(doc(db, 'users', user.uid));
+        const snap = await getDoc(doc(db, 'users', nextUser.uid));
         const familyValue = snap.exists() ? snap.data()?.familyId : null;
         setFamilyId(familyValue || null);
         setInitialRoute(familyValue ? 'MainTabs' : 'FamilySetup');
       } catch (error) {
+        console.error('[App] Failed to determine initial route', error);
         setFamilyId(null);
         setInitialRoute('FamilySetup');
       } finally {
@@ -119,28 +154,41 @@ export default function App() {
     savePushToken();
   }, [user?.uid]);
 
-  if (checkingAuth || initialRoute === null) {
+  const navigationTheme = useMemo(() => getNavigationTheme(theme, isDark), [theme, isDark]);
+
+  if (!isThemeReady || checkingAuth || initialRoute === null) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar style="auto" />
-      <Stack.Navigator initialRouteName={initialRoute}>
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
+    <NavigationContainer theme={navigationTheme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack.Navigator
+        initialRouteName={initialRoute}
+        screenOptions={{
+          headerStyle: { backgroundColor: theme.headerBackground },
+          headerTintColor: theme.text,
+          headerTitleStyle: { color: theme.text, fontWeight: '700' },
+          contentStyle: { backgroundColor: theme.background },
+        }}
+      >
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign up' }} />
         <Stack.Screen name="FamilySetup" component={FamilySetupScreen} options={{ title: 'Family Setup' }} />
         <Stack.Screen
           name="MainTabs"
-          options={{ 
+          options={{
             headerShown: false,
             gestureEnabled: false,
           }}
@@ -149,15 +197,23 @@ export default function App() {
         </Stack.Screen>
         <Stack.Screen name="Events" component={EventsScreen} options={{ title: 'Events' }} />
         <Stack.Screen name="AddEvent" component={AddEventScreen} options={{ title: 'Add Event' }} />
-        <Stack.Screen
-          name="EventDetails"
-          component={EventDetailsScreen}
-          options={{ title: 'Event Details' }}
-        />
+        <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ title: 'Event Details' }} />
         <Stack.Screen name="AddCalendarNote" component={AddCalendarNoteScreen} options={{ title: 'Add Calendar Note' }} />
         <Stack.Screen name="CreateAlbum" component={CreateAlbumScreen} options={{ title: 'Create Album' }} />
-        <Stack.Screen name="Album" component={AlbumScreen} options={({ route }) => ({ title: route.params?.albumName || 'Album' })} />
+        <Stack.Screen
+          name="Album"
+          component={AlbumScreen}
+          options={({ route }) => ({ title: route.params?.albumName || 'Album' })}
+        />
       </Stack.Navigator>
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppNavigator />
+    </ThemeProvider>
   );
 }

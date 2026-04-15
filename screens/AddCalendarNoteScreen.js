@@ -3,7 +3,6 @@ import {
   SafeAreaView,
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   Platform,
@@ -17,9 +16,13 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
-import { colors, radius, shadow, spacing, typography } from '../src/theme';
+import Button from '../src/components/Button';
+import Input from '../src/components/Input';
+import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function AddCalendarNoteScreen({ navigation }) {
+  const { theme } = useAppTheme();
+  const styles = useStyles();
   const [title, setTitle] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -53,9 +56,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
     return format(selectedDate, 'dd MMM yyyy');
   }, [selectedDate]);
 
-  const hasDate = useMemo(() => {
-    return selectedDate !== null;
-  }, [selectedDate]);
+  const hasDate = selectedDate !== null;
 
   const handleDatePicked = (_event, date) => {
     if (Platform.OS === 'android') {
@@ -112,7 +113,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -130,31 +131,14 @@ export default function AddCalendarNoteScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.header}>Add Calendar Note</Text>
-          <View style={styles.field}>
-            <Text style={styles.label}>Title</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Note title"
-              value={title}
-              onChangeText={setTitle}
-            />
-          </View>
+          <Input label="Title" placeholder="Note title" value={title} onChangeText={setTitle} />
           <View style={styles.field}>
             <Text style={styles.label}>Date</Text>
-            <TouchableOpacity
-              style={styles.dateTimeField}
-              onPress={() => setShowDatePicker(true)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Select date"
-            >
-              <Text style={styles.dateTimeLabel}>Date</Text>
+            <TouchableOpacity style={styles.dateTimeField} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+              <Text style={styles.dateTimeLabel}>Select date</Text>
               <Text style={[styles.dateTimeValue, !formattedDate && styles.placeholder]}>
                 {formattedDate || 'Select Date'}
               </Text>
@@ -162,25 +146,12 @@ export default function AddCalendarNoteScreen({ navigation }) {
           </View>
         </ScrollView>
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.saveButton, (!title.trim() || !hasDate || saving) && styles.disabled]}
-            onPress={handleSave}
-            disabled={!title.trim() || !hasDate || saving}
-            accessibilityRole="button"
-            accessibilityLabel="Save note"
-          >
-            <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Note'}</Text>
-          </TouchableOpacity>
+          <Button label={saving ? 'Saving Note...' : 'Save Note'} onPress={handleSave} loading={saving} disabled={!title.trim() || !hasDate || saving} />
         </View>
       </KeyboardAvoidingView>
 
       {Platform.OS === 'ios' ? (
-        <Modal
-          visible={showDatePicker}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
+        <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
@@ -188,165 +159,91 @@ export default function AddCalendarNoteScreen({ navigation }) {
                   <Text style={styles.modalButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>Select Date</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    handleDatePicked(null, selectedDate ?? new Date());
-                  }}
-                >
-                  <Text style={[styles.modalButtonText, styles.modalDoneText]}>Done</Text>
+                <TouchableOpacity onPress={() => handleDatePicked(null, selectedDate ?? new Date())}>
+                  <Text style={styles.modalButtonText}>Done</Text>
                 </TouchableOpacity>
               </View>
-              <DateTimePicker
-                value={selectedDate ?? new Date()}
-                mode="date"
-                display="spinner"
-                onChange={handleDatePicked}
-              />
+              <DateTimePicker value={selectedDate ?? new Date()} mode="date" display="spinner" onChange={handleDatePicked} />
             </View>
           </View>
         </Modal>
-      ) : (
-        <>
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate ?? new Date()}
-              mode="date"
-              display="default"
-              onChange={handleDatePicked}
-            />
-          )}
-        </>
-      )}
+      ) : showDatePicker ? (
+        <DateTimePicker value={selectedDate ?? new Date()} mode="date" display="default" onChange={handleDatePicked} />
+      ) : null}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxl + spacing.xl,
-    gap: spacing.lg,
-  },
-  header: {
-    ...typography.title,
-    textAlign: 'center',
-    color: colors.textPrimary,
-  },
-  field: {
-    gap: spacing.sm,
-  },
-  label: {
-    fontSize: typography.body.fontSize,
-    color: colors.textSecondary,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xs,
-    fontSize: typography.body.fontSize + 2,
-    backgroundColor: colors.surface,
-  },
-  dateTimeField: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    marginTop: spacing.xs,
-  },
-  dateTimeLabel: {
-    fontSize: typography.small.fontSize,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  dateTimeValue: {
-    fontSize: typography.body.fontSize + 3,
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  placeholder: {
-    color: colors.textSecondary,
-    fontWeight: '400',
-  },
-  footer: {
-    padding: spacing.xl,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    ...shadow,
-  },
-  saveText: {
-    color: '#fff',
-    fontSize: typography.body.fontSize + 2,
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  infoText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    width: '90%',
-    maxWidth: 400,
-    padding: spacing.lg,
-    ...(Platform.OS === 'ios' && {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-    }),
-    ...(Platform.OS === 'android' && {
-      elevation: 8,
-    }),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalTitle: {
-    ...typography.heading,
-    color: colors.textPrimary,
-  },
-  modalButtonText: {
-    fontSize: typography.body.fontSize + 1,
-    color: colors.primary,
-  },
-  modalDoneText: {
-    fontWeight: '600',
-  },
-});
+const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: theme.background },
+    container: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxl,
+      gap: spacing.lg,
+    },
+    header: { ...typography.title, textAlign: 'center', color: theme.text },
+    field: { gap: spacing.sm },
+    label: { fontSize: typography.body.fontSize, color: theme.secondaryText },
+    dateTimeField: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: radius.md,
+      backgroundColor: theme.inputBackground,
+    },
+    dateTimeLabel: {
+      fontSize: typography.small.fontSize,
+      color: theme.secondaryText,
+      marginBottom: spacing.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    dateTimeValue: { fontSize: typography.body.fontSize + 3, color: theme.text, fontWeight: '500' },
+    placeholder: { color: theme.secondaryText, fontWeight: '400' },
+    footer: {
+      padding: spacing.lg,
+      borderTopWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    centerContent: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    infoText: {
+      fontSize: typography.body.fontSize + 1,
+      color: theme.secondaryText,
+      textAlign: 'center',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: theme.card,
+      borderRadius: radius.lg,
+      width: '90%',
+      maxWidth: 400,
+      padding: spacing.lg,
+      ...shadow,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    modalTitle: { ...typography.heading, color: theme.text },
+    modalButtonText: { fontSize: typography.body.fontSize + 1, color: theme.primary },
+  })
+);
