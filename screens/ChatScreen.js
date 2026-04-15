@@ -56,6 +56,33 @@ const isEmojiOnlyMessage = (value) => {
   return /^[\p{Extended_Pictographic}\uFE0F]+$/u.test(noSpaces);
 };
 
+const uploadAudio = async ({ uri, chatId, messageId }) => {
+  try {
+    console.log('VOICE URI:', uri);
+    if (!uri) {
+      throw new Error('Missing recording URI');
+    }
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    console.log('VOICE BLOB SIZE:', blob.size);
+
+    if (!blob.size) {
+      throw new Error('Recording file is empty');
+    }
+
+    const filename = `${messageId || `voice_${Date.now()}`}.m4a`;
+    const storageRef = ref(storage, `voiceMessages/${chatId}/${filename}`);
+
+    await uploadBytes(storageRef, blob);
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+  } catch (error) {
+    console.error('UPLOAD ERROR FULL:', error);
+    throw error;
+  }
+};
+
 export default function ChatScreen({ navigation }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -279,14 +306,16 @@ export default function ChatScreen({ navigation }) {
 
     try {
       setUploadingVoice(true);
+      if (!storage) {
+        throw new Error('Firebase Storage is not initialized');
+      }
       const messagesRef = collection(db, 'families', familyId, 'messages');
       const messageDocRef = doc(messagesRef);
-      const voiceRef = ref(storage, `voiceMessages/${familyId}/${messageDocRef.id}.m4a`);
-
-      const audioResponse = await fetch(localUri);
-      const audioBlob = await audioResponse.blob();
-      await uploadBytes(voiceRef, audioBlob);
-      const audioUrl = await getDownloadURL(voiceRef);
+      const audioUrl = await uploadAudio({
+        uri: localUri,
+        chatId: familyId,
+        messageId: messageDocRef.id,
+      });
 
       await setDoc(messageDocRef, {
         chatId: familyId,
@@ -301,6 +330,9 @@ export default function ChatScreen({ navigation }) {
       requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
     } catch (error) {
       Alert.alert('Upload failed', 'Voice message upload failed. Please try again.');
+      console.log('ERROR CODE:', error?.code || 'no-code');
+      console.log('ERROR MESSAGE:', error?.message || 'no-message');
+      console.log('FULL ERROR:', JSON.stringify(error, null, 2));
       console.error('Voice upload failed', error);
     } finally {
       setUploadingVoice(false);
