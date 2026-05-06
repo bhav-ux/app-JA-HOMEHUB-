@@ -140,17 +140,32 @@ function AppNavigator() {
 
   useEffect(() => {
     if (!user?.uid) return;
-
+  
     const savePushToken = async () => {
       try {
         const token = await registerForPushNotificationsAsync();
-        if (!token) return;
-        await setDoc(doc(db, 'users', user.uid), { expoPushToken: token }, { merge: true });
+  
+        console.log('EXPO PUSH TOKEN:', token);
+  
+        if (!token) {
+          alert('No push token received');
+          return;
+        }
+  
+        alert(`Push token received:\n\n${token}`);
+  
+        await setDoc(
+          doc(db, 'users', user.uid),
+          { expoPushToken: token },
+          { merge: true }
+        );
       } catch (error) {
         console.error('Failed to register push token', error);
+  
+        alert(`Push registration failed:\n\n${error.message}`);
       }
     };
-
+  
     savePushToken();
   }, [user?.uid]);
 
