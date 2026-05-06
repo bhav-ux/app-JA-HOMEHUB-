@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, SafeAreaView, ScrollView, View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { auth, db } from '../firebaseConfig';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 import { deleteCalendarEvent } from '../utils/delete';
+import AnimatedCard from '../src/components/AnimatedCard';
+
+const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
 
 export default function CalendarScreen({ navigation }) {
   const { theme } = useAppTheme();
@@ -16,6 +19,22 @@ export default function CalendarScreen({ navigation }) {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [familyId, setFamilyId] = useState(null);
   const [familyLoading, setFamilyLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fabScale = useRef(new Animated.Value(1)).current;
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 800);
+  }, []);
+
+  const onFabPressIn = useCallback(() => {
+    Animated.spring(fabScale, { toValue: 0.88, ...FAB_SPRING }).start();
+  }, [fabScale]);
+
+  const onFabPressOut = useCallback(() => {
+    Animated.spring(fabScale, { toValue: 1, ...FAB_SPRING }).start();
+  }, [fabScale]);
 
   const user = auth.currentUser;
 
@@ -159,7 +178,7 @@ export default function CalendarScreen({ navigation }) {
 
   const handleDeleteCalendarEvent = (eventItem) => {
     if (!user || !familyId || !eventItem?.id) return;
-    Alert.alert('Delete Event', 'Are you sure you want to delete this?', [
+    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -178,7 +197,7 @@ export default function CalendarScreen({ navigation }) {
 
   const handleNoteLongPress = (note) => {
     if (!user || !note?.createdBy || note.createdBy !== user.uid || !familyId) return;
-    Alert.alert('Delete Note?', 'This cannot be undone.', [
+    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -219,11 +238,9 @@ export default function CalendarScreen({ navigation }) {
   };
 
   const renderNoteItem = ({ item }) => (
-    <TouchableOpacity activeOpacity={0.9} onLongPress={() => handleNoteLongPress(item)}>
-      <View style={styles.noteCard}>
-        <Text style={styles.noteTitle}>{item.title}</Text>
-      </View>
-    </TouchableOpacity>
+    <AnimatedCard style={styles.noteCard} onLongPress={() => handleNoteLongPress(item)}>
+      <Text style={styles.noteTitle}>{item.title}</Text>
+    </AnimatedCard>
   );
 
   const selectedDateValue = toValidDate(selectedDate);
@@ -263,24 +280,37 @@ export default function CalendarScreen({ navigation }) {
       <View style={styles.container}>
         <Text style={styles.title}>Calendar</Text>
         {loading ? (
-          <ActivityIndicator size="large" color={theme.primary} style={styles.loader} />
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color={theme.primary} />
+          </View>
         ) : (
-          <>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+          >
             <Calendar
               current={selectedDate}
               onDayPress={(day) => setSelectedDate(day.dateString)}
               markedDates={markedDates}
               markingType="multi-dot"
               theme={{
+                calendarBackground: theme.card,
+                backgroundColor: theme.card,
+                monthTextColor: theme.text,
+                dayTextColor: theme.text,
+                textDisabledColor: theme.secondaryText,
+                textSectionTitleColor: theme.secondaryText,
                 todayTextColor: theme.primary,
                 arrowColor: theme.primary,
                 selectedDayBackgroundColor: theme.primary,
                 selectedDayTextColor: '#fff',
-                calendarBackground: theme.card,
-                monthTextColor: theme.text,
+                dotColor: theme.primary,
+                selectedDotColor: '#fff',
+                indicatorColor: theme.primary,
                 textMonthFontWeight: '700',
-                textDayStyle: { color: theme.text },
-                textSectionTitleColor: theme.secondaryText,
                 textDayFontSize: 16,
                 textMonthFontSize: 18,
                 textDayHeaderFontSize: 14,
@@ -299,7 +329,7 @@ export default function CalendarScreen({ navigation }) {
 
               {selectedDateNotes.length > 0 ? (
                 <>
-                  <Text style={[styles.sectionTitle, { marginTop: selectedDateEvents.length > 0 ? spacing.lg : 0 }]}>
+                  <Text style={[styles.sectionTitle, selectedDateEvents.length > 0 ? styles.notesSectionTitle : null]}>
                     Notes ({selectedDateNotes.length})
                   </Text>
                   <FlatList data={selectedDateNotes} keyExtractor={(item) => item.id} renderItem={renderNoteItem} contentContainerStyle={styles.notesList} scrollEnabled={false} />
@@ -307,14 +337,22 @@ export default function CalendarScreen({ navigation }) {
               ) : null}
 
               {selectedDateEvents.length === 0 && selectedDateNotes.length === 0 ? (
-                <Text style={styles.emptyText}>No events or notes on this date</Text>
+                <Text style={styles.emptyText}>No notes for this day.</Text>
               ) : null}
             </View>
-            <TouchableOpacity style={styles.fab} onPress={handleAddNote}>
-              <Text style={styles.fabText}>+</Text>
-            </TouchableOpacity>
-          </>
+          </ScrollView>
         )}
+        <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+          <TouchableOpacity
+            style={styles.fabTouchable}
+            onPress={handleAddNote}
+            onPressIn={onFabPressIn}
+            onPressOut={onFabPressOut}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.fabText}>+</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -331,7 +369,8 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       paddingBottom: spacing.md,
       color: theme.text,
     },
-    loader: { marginTop: spacing.xl },
+    scrollView: { flex: 1 },
+    scrollContent: { paddingBottom: 88 },
     calendar: {
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
@@ -339,13 +378,12 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       backgroundColor: theme.card,
     },
     eventsSection: {
-      flex: 1,
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.lg,
-      paddingBottom: spacing.xxl,
     },
     dateTitle: { fontSize: typography.heading.fontSize + 2, fontWeight: '700', color: theme.text, marginBottom: spacing.md },
     sectionTitle: { ...typography.heading, color: theme.secondaryText, marginBottom: spacing.sm },
+    notesSectionTitle: { marginTop: spacing.lg },
     eventsList: { paddingBottom: spacing.xl },
     notesList: { paddingBottom: spacing.xl },
     emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', marginTop: spacing.lg },
@@ -394,10 +432,10 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       height: 56,
       borderRadius: 28,
       backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
+      overflow: 'hidden',
       ...shadow,
     },
+    fabTouchable: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     fabText: { color: '#fff', fontSize: 32, marginTop: -4 },
     centerContent: {
       flex: 1,
@@ -405,6 +443,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       justifyContent: 'center',
       paddingHorizontal: spacing.lg,
       backgroundColor: theme.background,
+      paddingVertical: spacing.xxl,
     },
     infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center' },
   })

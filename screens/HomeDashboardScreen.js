@@ -1,70 +1,60 @@
-import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Alert, Animated, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
+import AnimatedCard from '../src/components/AnimatedCard';
 
 export default function HomeDashboardScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
   const familyId = familyIdProp ?? route?.params?.familyId;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 280,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
   const cards = [
-    {
-      key: 'Events',
-      title: 'Events',
-      description: 'See upcoming family plans',
-      icon: 'list-outline',
-    },
-    {
-      key: 'Calendar',
-      title: 'Calendar',
-      description: 'View family schedule',
-      icon: 'calendar-outline',
-    },
-    {
-      key: 'Chat',
-      title: 'Chat',
-      description: 'Stay in touch with family',
-      icon: 'chatbubbles-outline',
-    },
-    {
-      key: 'Albums',
-      title: 'Albums',
-      description: 'Share memories together',
-      icon: 'images-outline',
-    },
+    { key: 'Events', title: 'Events', description: 'See upcoming family plans', icon: 'list-outline' },
+    { key: 'Calendar', title: 'Calendar', description: 'View family schedule', icon: 'calendar-outline' },
+    { key: 'Chat', title: 'Chat', description: 'Stay in touch with family', icon: 'chatbubbles-outline' },
+    { key: 'Albums', title: 'Albums', description: 'Share memories together', icon: 'images-outline' },
   ];
 
   const handleNavigate = (target) => {
-    const destination = target === 'Albums' ? 'Albums' : target;
-    if (destination === 'Albums' && !familyId) {
+    if (target === 'Albums' && !familyId) {
       Alert.alert('Family not set', 'Join or create a family to view albums.');
       return;
     }
-    navigation.navigate(destination, destination === 'Albums' ? { familyId } : undefined);
+    navigation.navigate(target, target === 'Albums' ? { familyId } : undefined);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
         <Text style={styles.title}>Welcome Home</Text>
         <Text style={styles.subtitle}>Quick access to your family spaces</Text>
         <View style={styles.grid}>
           {cards.map((card) => (
-            <TouchableOpacity
+            <AnimatedCard
               key={card.key}
               style={styles.card}
-              activeOpacity={0.88}
               onPress={() => handleNavigate(card.key)}
+              accessibilityLabel={`Navigate to ${card.title}`}
             >
               <View style={[styles.iconWrap, { backgroundColor: `${theme.primary}18` }]}>
                 <Ionicons name={card.icon} size={28} color={theme.primary} />
               </View>
               <Text style={styles.cardTitle}>{card.title}</Text>
               <Text style={styles.cardDesc}>{card.description}</Text>
-            </TouchableOpacity>
+            </AnimatedCard>
           ))}
         </View>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

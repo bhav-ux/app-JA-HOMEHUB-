@@ -199,7 +199,7 @@ export default function AlbumScreen({ route }) {
           numColumns={3}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={listContentStyle}
-          ListEmptyComponent={<Text style={styles.emptyText}>No photos yet. Tap + to add one.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{"No photos yet.\nTap + to add one."}</Text>}
         />
       )}
 
@@ -252,7 +252,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.inputBackground },
     photoPlaceholderText: { fontSize: 11, color: theme.secondaryText },
     photoMeta: { marginTop: 4, fontSize: 11, color: theme.secondaryText },
-    emptyText: { fontSize: 16, color: theme.secondaryText },
+    emptyText: { fontSize: 16, color: theme.secondaryText, textAlign: 'center', lineHeight: 22 },
     fab: {
       position: 'absolute',
       right: spacing.lg,

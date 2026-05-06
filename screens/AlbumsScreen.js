@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -13,6 +15,23 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { deleteAlbum } from '../utils/delete';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
+import AnimatedCard from '../src/components/AnimatedCard';
+
+const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
+
+function AlbumCard({ item, onOpen, onDelete, styles }) {
+  return (
+    <AnimatedCard style={styles.albumCard} onPress={onOpen} accessibilityLabel={`Open album ${item.name || 'Untitled Album'}`}>
+      <View style={styles.albumInfo} pointerEvents="none">
+        <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
+        <Text style={styles.albumMeta}>Tap to view</Text>
+      </View>
+      <TouchableOpacity style={styles.deleteButton} activeOpacity={0.7} onPress={onDelete}>
+        <Text style={styles.deleteButtonText}>Delete</Text>
+      </TouchableOpacity>
+    </AnimatedCard>
+  );
+}
 
 export default function AlbumsScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme } = useAppTheme();
@@ -20,6 +39,31 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
   const familyId = familyIdProp ?? route?.params?.familyId;
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const contentFade = useRef(new Animated.Value(0)).current;
+  const hasAnimated = useRef(false);
+  const fabScale = useRef(new Animated.Value(1)).current;
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 800);
+  }, []);
+
+  const onFabPressIn = useCallback(() => {
+    Animated.spring(fabScale, { toValue: 0.88, ...FAB_SPRING }).start();
+  }, [fabScale]);
+
+  const onFabPressOut = useCallback(() => {
+    Animated.spring(fabScale, { toValue: 1, ...FAB_SPRING }).start();
+  }, [fabScale]);
+
+  useEffect(() => {
+    if (!loading && !hasAnimated.current) {
+      hasAnimated.current = true;
+      Animated.timing(contentFade, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    }
+  }, [loading, contentFade]);
 
   useEffect(() => {
     if (!familyId) {
@@ -71,7 +115,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
       return;
     }
     if (!album?.id || !familyId) return;
-    Alert.alert('Delete Album and all photos?', 'Are you sure you want to delete this?', [
+    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -89,15 +133,12 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
   };
 
   const renderAlbum = ({ item }) => (
-    <View style={styles.albumCard}>
-      <TouchableOpacity style={styles.albumInfo} onPress={() => handleOpenAlbum(item)}>
-        <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
-        <Text style={styles.albumMeta}>Tap to view</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteAlbum(item)}>
-        <Text style={styles.deleteButtonText}>Delete</Text>
-      </TouchableOpacity>
-    </View>
+    <AlbumCard
+      item={item}
+      styles={styles}
+      onOpen={() => handleOpenAlbum(item)}
+      onDelete={() => handleDeleteAlbum(item)}
+    />
   );
 
   return (
@@ -114,18 +155,30 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
             <Text style={styles.infoText}>Family not set. Join or create a family to view albums.</Text>
           </View>
         ) : (
-          <FlatList
-            data={albums}
-            keyExtractor={(item) => item.id}
-            renderItem={renderAlbum}
-            contentContainerStyle={albums.length ? styles.listContent : styles.emptyContent}
-            ListEmptyComponent={<Text style={styles.emptyText}>No albums yet. Tap + to create one.</Text>}
-          />
+          <Animated.View style={[styles.flex, { opacity: contentFade }]}>
+            <FlatList
+              data={albums}
+              keyExtractor={(item) => item.id}
+              renderItem={renderAlbum}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={albums.length ? styles.listContent : styles.emptyContent}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+              ListEmptyComponent={<Text style={styles.emptyText}>{"No albums yet.\nCreate your first family album."}</Text>}
+            />
+          </Animated.View>
         )}
 
-        <TouchableOpacity style={styles.fab} onPress={handleCreateAlbum}>
-          <Text style={styles.fabText}>+</Text>
-        </TouchableOpacity>
+        <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+          <TouchableOpacity
+            style={styles.fabTouchable}
+            onPress={handleCreateAlbum}
+            onPressIn={onFabPressIn}
+            onPressOut={onFabPressOut}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.fabText}>+</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -135,6 +188,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.background },
     container: { flex: 1, padding: spacing.lg, backgroundColor: theme.background },
+    flex: { flex: 1 },
     title: { ...typography.title, marginBottom: spacing.lg, color: theme.text },
     centerContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center' },
@@ -166,7 +220,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       justifyContent: 'center',
     },
     deleteButtonText: { color: theme.error, fontSize: typography.small.fontSize + 1, fontWeight: '700' },
-    emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText },
+    emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', lineHeight: 22 },
     fab: {
       position: 'absolute',
       right: spacing.lg,
@@ -175,10 +229,10 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       height: 56,
       borderRadius: 28,
       backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
+      overflow: 'hidden',
       ...shadow,
     },
+    fabTouchable: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     fabText: { color: '#fff', fontSize: 32, lineHeight: 34, fontWeight: '700', marginTop: -2 },
   })
 );

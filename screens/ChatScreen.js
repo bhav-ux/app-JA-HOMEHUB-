@@ -304,7 +304,7 @@ export default function ChatScreen({ navigation }) {
 
   const handleMessageLongPress = (message) => {
     if (!message || message.senderId !== auth.currentUser?.uid || !familyId) return;
-    Alert.alert('Delete message?', 'This will remove it for everyone.', [
+    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -420,9 +420,11 @@ export default function ChatScreen({ navigation }) {
           contentContainerStyle={styles.listContent}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           onLayout={() => listRef.current?.scrollToEnd({ animated: true })}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No messages yet.</Text>
+              <Text style={styles.emptyStateText}>{"No messages yet.\nStart the conversation."}</Text>
             </View>
           }
           ListFooterComponent={<View style={styles.footerSpacing} />}
@@ -578,8 +580,8 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     sendButtonDisabled: { opacity: 0.5 },
     recordingHint: { marginHorizontal: spacing.lg, marginBottom: spacing.xs, color: theme.secondaryText, fontSize: typography.small.fontSize },
     footerSpacing: { height: spacing.sm },
-    emptyState: { paddingVertical: spacing.xl, alignItems: 'center' },
-    emptyStateText: { color: theme.secondaryText, fontSize: typography.body.fontSize },
+    emptyState: { paddingVertical: spacing.xxl, alignItems: 'center', paddingHorizontal: spacing.lg },
+    emptyStateText: { color: theme.secondaryText, fontSize: typography.body.fontSize + 1, textAlign: 'center', lineHeight: 22 },
     emojiOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: theme.overlay },
     emojiSheet: {
       backgroundColor: theme.card,

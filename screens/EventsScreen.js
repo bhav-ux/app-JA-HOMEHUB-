@@ -1,18 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   SafeAreaView,
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Pressable,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { auth } from '../firebaseConfig';
 import { getUserFamilyId, subscribeToEvents } from '../services/eventService';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
+import AnimatedCard from '../src/components/AnimatedCard';
+
+const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
 
 export default function EventsScreen({ navigation }) {
   const { theme } = useAppTheme();
@@ -21,6 +25,9 @@ export default function EventsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [familyId, setFamilyId] = useState(null);
   const [familyLoading, setFamilyLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fabScale = useRef(new Animated.Value(1)).current;
 
   const user = auth.currentUser;
 
@@ -87,6 +94,19 @@ export default function EventsScreen({ navigation }) {
     return unsubscribe;
   }, [user, familyId]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 800);
+  }, []);
+
+  const onFabPressIn = useCallback(() => {
+    Animated.spring(fabScale, { toValue: 0.88, ...FAB_SPRING }).start();
+  }, [fabScale]);
+
+  const onFabPressOut = useCallback(() => {
+    Animated.spring(fabScale, { toValue: 1, ...FAB_SPRING }).start();
+  }, [fabScale]);
+
   const handleAddEvent = () => {
     if (!user) {
       Alert.alert('Not signed in', 'You need to be signed in to create events.');
@@ -96,18 +116,17 @@ export default function EventsScreen({ navigation }) {
   };
 
   const renderItem = ({ item }) => (
-    <Pressable
+    <AnimatedCard
+      style={styles.eventItem}
       onPress={() => navigation.navigate('EventDetails', { event: item, familyId })}
-      accessibilityRole="button"
       accessibilityLabel={`Open event ${item.title}`}
-      style={({ pressed }) => [styles.eventItem, pressed && styles.eventItemPressed]}
     >
       <View style={styles.eventInfo}>
         <Text style={styles.eventTitle}>{item.title}</Text>
         <Text style={styles.eventDate}>{item.formattedDate}</Text>
       </View>
       <Text style={styles.chevron}>›</Text>
-    </Pressable>
+    </AnimatedCard>
   );
 
   if (!user) {
@@ -145,22 +164,34 @@ export default function EventsScreen({ navigation }) {
       <View style={styles.container}>
         <Text style={styles.title}>Events</Text>
         {loading ? (
-          <ActivityIndicator size="large" color={theme.primary} />
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color={theme.primary} />
+          </View>
         ) : (
           <FlatList
             data={formattedEvents}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             ListEmptyComponent={
               <View style={styles.centerContent}>
-                <Text style={styles.infoText}>No events yet. Tap + to add one.</Text>
+                <Text style={styles.infoText}>{"No family events yet.\nTap + to create one."}</Text>
               </View>
             }
           />
         )}
-        <TouchableOpacity style={styles.fab} onPress={handleAddEvent}>
-          <Text style={styles.fabText}>+</Text>
-        </TouchableOpacity>
+        <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+          <TouchableOpacity
+            style={styles.fabTouchable}
+            onPress={handleAddEvent}
+            onPressIn={onFabPressIn}
+            onPressOut={onFabPressOut}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.fabText}>+</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -172,7 +203,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     container: { flex: 1, padding: spacing.lg, backgroundColor: theme.background },
     title: { ...typography.title, marginBottom: spacing.lg, color: theme.text },
     centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center' },
+    infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', lineHeight: 22 },
     eventItem: {
       backgroundColor: theme.card,
       padding: spacing.lg,
@@ -185,7 +216,6 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderColor: theme.border,
       ...shadow,
     },
-    eventItemPressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
     eventInfo: { flex: 1 },
     eventTitle: { ...typography.heading, marginBottom: spacing.xs, color: theme.text },
     eventDate: { fontSize: typography.body.fontSize, color: theme.secondaryText },
@@ -198,10 +228,10 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       height: 56,
       borderRadius: 28,
       backgroundColor: theme.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
+      overflow: 'hidden',
       ...shadow,
     },
+    fabTouchable: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     fabText: { color: '#fff', fontSize: 32, textAlign: 'center', marginTop: -2 },
   })
 );

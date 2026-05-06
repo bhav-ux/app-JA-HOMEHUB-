@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { deleteEvent } from '../utils/delete';
 import { auth } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
@@ -14,6 +14,16 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [deleting, setDeleting] = useState(false);
   const [creatorName, setCreatorName] = useState('');
   const familyId = passedFamilyId || event?.familyId;
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(10)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 280, friction: 26, useNativeDriver: true }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   useEffect(() => {
     if (!event?.createdBy) return;
@@ -40,7 +50,7 @@ export default function EventDetailsScreen({ route, navigation }) {
       return;
     }
 
-    Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [
+    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -75,15 +85,17 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>{event.title}</Text>
-        <Text style={styles.date}>{dateLabel}</Text>
-        {creatorLabel ? <Text style={styles.meta}>Created by: {creatorLabel}</Text> : null}
-        {event.description ? <Text style={styles.description}>{event.description}</Text> : null}
-        {canDelete ? (
-          <Button label={deleting ? 'Deleting Event...' : 'Delete Event'} onPress={handleDelete} loading={deleting} variant="danger" />
-        ) : null}
-      </ScrollView>
+      <Animated.View style={[styles.animContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+          <Text style={styles.title}>{event.title}</Text>
+          <Text style={styles.date}>{dateLabel}</Text>
+          {creatorLabel ? <Text style={styles.meta}>Created by: {creatorLabel}</Text> : null}
+          {event.description ? <Text style={styles.description}>{event.description}</Text> : null}
+          {canDelete ? (
+            <Button label={deleting ? 'Deleting Event...' : 'Delete Event'} onPress={handleDelete} loading={deleting} variant="danger" />
+          ) : null}
+        </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -91,6 +103,7 @@ export default function EventDetailsScreen({ route, navigation }) {
 const useStyles = createThemedStyles(({ theme }) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.background },
+    animContainer: { flex: 1 },
     container: { padding: spacing.lg, gap: spacing.lg },
     title: { ...typography.title, color: theme.text },
     date: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText },

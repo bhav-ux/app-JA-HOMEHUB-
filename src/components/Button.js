@@ -99,8 +99,8 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       backgroundColor: theme.error,
     },
     pressed: {
-      transform: [{ scale: 0.98 }],
-      opacity: 0.92,
+      transform: [{ scale: 0.97 }],
+      opacity: 0.88,
     },
     disabled: {
       opacity: 0.6,
