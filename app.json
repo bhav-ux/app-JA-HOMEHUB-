@@ -24,13 +24,14 @@
       "edgeToEdgeEnabled": true,
       "package": "com.bhavyam_j20.MyExpoApp"
     },
-    "extra": {
-      "eas": {
-        "projectId": "YOUR_PROJECT_ID_HERE"
-      }
-    },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "deacd0e1-6fa7-4b5b-bf84-7fbfb06cee99"
+      }
+    },
+    "owner": "bhavjain2011"
   }
 }

@@ -22,7 +22,7 @@
     "expo-crypto": "~15.0.8",
     "expo-device": "~8.0.10",
     "expo-image-picker": "~17.0.8",
-    "expo-notifications": "~0.32.16",
+    "expo-notifications": "~0.32.17",
     "expo-status-bar": "~3.0.8",
     "firebase": "^12.6.0",
     "firebase-admin": "^13.6.0",
