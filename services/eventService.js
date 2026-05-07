@@ -49,6 +49,7 @@ export async function getUserFamilyId(userId) {
 export async function createEvent({
   familyId,
   title,
+  emoji,
   description,
   date,
   createdBy,
@@ -75,8 +76,11 @@ export async function createEvent({
       throw new Error('Event date is invalid');
     }
 
+    const trimmedEmoji = emoji?.trim() || null;
+
     const payload = {
       title: trimmedTitle,
+      emoji: trimmedEmoji,
       description: description?.trim() || '',
       date: eventDate,
       createdBy,

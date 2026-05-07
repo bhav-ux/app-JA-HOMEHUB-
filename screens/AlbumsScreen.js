@@ -3,6 +3,7 @@ import {
   Animated,
   ActivityIndicator,
   FlatList,
+  Image,
   RefreshControl,
   SafeAreaView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   View,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { deleteAlbum } from '../utils/delete';
@@ -19,12 +21,31 @@ import AnimatedCard from '../src/components/AnimatedCard';
 
 const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
 
-function AlbumCard({ item, onOpen, onDelete, styles }) {
+const getAlbumPreviewUri = (album) =>
+  album?.coverUrl ||
+  album?.thumbnailUrl ||
+  album?.previewUrl ||
+  (Array.isArray(album?.previewImages) ? album.previewImages[0] : null) ||
+  (Array.isArray(album?.photos) ? album.photos[0]?.url : null) ||
+  null;
+
+function AlbumCard({ item, onOpen, onDelete, styles, theme }) {
+  const previewUri = getAlbumPreviewUri(item);
+
   return (
     <AnimatedCard style={styles.albumCard} onPress={onOpen} accessibilityLabel={`Open album ${item.name || 'Untitled Album'}`}>
+      <View style={styles.previewWrap}>
+        {previewUri ? (
+          <Image source={{ uri: previewUri }} style={styles.previewImage} />
+        ) : (
+          <View style={styles.previewPlaceholder}>
+            <Ionicons name="images-outline" size={20} color={theme.secondaryText} />
+          </View>
+        )}
+      </View>
       <View style={styles.albumInfo} pointerEvents="none">
         <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
-        <Text style={styles.albumMeta}>Tap to view</Text>
+        <Text style={styles.albumMeta}>{previewUri ? 'Tap to open album' : 'No preview yet'}</Text>
       </View>
       <TouchableOpacity style={styles.deleteButton} activeOpacity={0.7} onPress={onDelete}>
         <Text style={styles.deleteButtonText}>Delete</Text>
@@ -136,6 +157,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
     <AlbumCard
       item={item}
       styles={styles}
+      theme={theme}
       onOpen={() => handleOpenAlbum(item)}
       onDelete={() => handleDeleteAlbum(item)}
     />
@@ -187,32 +209,48 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
 const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.background },
-    container: { flex: 1, padding: spacing.lg, backgroundColor: theme.background },
+    container: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md, backgroundColor: theme.background },
     flex: { flex: 1 },
-    title: { ...typography.title, marginBottom: spacing.lg, color: theme.text },
+    title: { ...typography.title, marginBottom: spacing.md, color: theme.text },
     centerContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center' },
-    listContent: { paddingBottom: spacing.xxl, gap: spacing.md },
+    listContent: { paddingBottom: spacing.xxl + 40, gap: spacing.sm + 2 },
     emptyContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
     albumCard: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: spacing.lg,
-      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.lg,
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.border,
       ...shadow,
     },
+    previewWrap: {
+      width: 58,
+      height: 58,
+      borderRadius: radius.md,
+      overflow: 'hidden',
+      marginRight: spacing.md,
+      backgroundColor: theme.inputBackground,
+    },
+    previewImage: { width: '100%', height: '100%' },
+    previewPlaceholder: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.inputBackground,
+    },
     albumInfo: { flex: 1 },
-    albumName: { ...typography.heading, color: theme.text },
-    albumMeta: { marginTop: spacing.xs, fontSize: typography.body.fontSize, color: theme.secondaryText },
+    albumName: { ...typography.heading, fontSize: typography.heading.fontSize - 1, color: theme.text },
+    albumMeta: { marginTop: 3, fontSize: typography.small.fontSize, color: theme.secondaryText },
     deleteButton: {
       marginLeft: spacing.md,
-      minHeight: 44,
+      minHeight: 36,
       minWidth: 44,
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.sm + 2,
       borderRadius: radius.md,
       borderWidth: 1,
       borderColor: theme.error,

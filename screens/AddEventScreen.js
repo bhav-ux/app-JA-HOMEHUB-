@@ -20,6 +20,7 @@ export default function AddEventScreen({ navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
   const [title, setTitle] = useState('');
+  const [emoji, setEmoji] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
@@ -78,6 +79,7 @@ export default function AddEventScreen({ navigation }) {
       await createEventRecord({
         familyId,
         title,
+        emoji,
         description,
         date,
         createdBy: user.uid,
@@ -115,6 +117,12 @@ export default function AddEventScreen({ navigation }) {
         <Text style={styles.title}>Add Event</Text>
         <View style={styles.card}>
           <Input placeholder="Event Title" value={title} onChangeText={setTitle} />
+          <Input
+            placeholder="Emoji (optional, e.g. 🎂)"
+            value={emoji}
+            onChangeText={setEmoji}
+            maxLength={8}
+          />
           <Input
             placeholder="Description (optional)"
             value={description}

@@ -173,9 +173,10 @@ export default function EventsScreen({ navigation }) {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={formattedEvents.length ? styles.listContent : styles.emptyListContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             ListEmptyComponent={
-              <View style={styles.centerContent}>
+              <View style={styles.emptyState}>
                 <Text style={styles.infoText}>{"No family events yet.\nTap + to create one."}</Text>
               </View>
             }
@@ -200,15 +201,19 @@ export default function EventsScreen({ navigation }) {
 const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.background },
-    container: { flex: 1, padding: spacing.lg, backgroundColor: theme.background },
-    title: { ...typography.title, marginBottom: spacing.lg, color: theme.text },
+    container: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md, backgroundColor: theme.background },
+    title: { ...typography.title, marginBottom: spacing.md, color: theme.text },
     centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    listContent: { paddingBottom: spacing.xxl + 40 },
+    emptyListContent: { flexGrow: 1, paddingBottom: spacing.xxl + 40 },
+    emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
     infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', lineHeight: 22 },
     eventItem: {
       backgroundColor: theme.card,
-      padding: spacing.lg,
-      borderRadius: radius.md,
-      marginBottom: spacing.md,
+      paddingVertical: spacing.md + 2,
+      paddingHorizontal: spacing.md + 2,
+      borderRadius: radius.lg,
+      marginBottom: spacing.sm + 2,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',

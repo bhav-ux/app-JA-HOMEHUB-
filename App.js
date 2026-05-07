@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -23,27 +23,11 @@ import FamilySetupScreen from './screens/FamilySetupScreen';
 import HomeDashboardScreen from './screens/HomeDashboardScreen';
 import { auth, db } from './firebaseConfig';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
-import { getNavigationTheme, spacing } from './src/theme';
+import { getNavigationTheme } from './src/theme';
 import { registerForPushNotificationsAsync } from './utils/notifications';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-
-function ThemeToggle() {
-  const { theme, isDark, toggleTheme } = useTheme();
-
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-      <Text style={{ color: theme.secondaryText, fontSize: 12 }}>{isDark ? 'Dark' : 'Light'}</Text>
-      <Switch
-        value={isDark}
-        onValueChange={toggleTheme}
-        trackColor={{ false: theme.border, true: theme.primary }}
-        thumbColor="#FFFFFF"
-      />
-    </View>
-  );
-}
 
 function MainTabs({ familyId, route }) {
   const { theme } = useTheme();
@@ -85,7 +69,7 @@ function MainTabs({ familyId, route }) {
         options={{
           headerShown: true,
           headerTitle: 'Profile',
-          headerRight: () => <ThemeToggle />,
+          headerTitleAlign: 'center',
         }}
       >
         {(props) => <ProfileScreen {...props} familyId={familyIdValue} />}
@@ -195,6 +179,9 @@ function AppNavigator() {
           headerStyle: { backgroundColor: theme.headerBackground },
           headerTintColor: theme.text,
           headerTitleStyle: { color: theme.text, fontWeight: '700' },
+          headerTitleAlign: 'center',
+          headerBackTitleVisible: false,
+          headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: theme.background },
         }}
       >
