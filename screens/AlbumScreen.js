@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import ImageViewing from 'react-native-image-viewing';
+//import ImageViewing from 'react-native-image-viewing';
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
@@ -207,12 +207,12 @@ export default function AlbumScreen({ route }) {
         {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fabText}>+</Text>}
       </TouchableOpacity>
 
-      <ImageViewing
+      {/*<ImageViewing
         images={viewerPhotos.map((p) => ({ uri: p.url }))}
         imageIndex={viewerIndex}
         visible={viewerVisible}
         onRequestClose={() => setViewerVisible(false)}
-      />
+      />*/}
     </SafeAreaView>
   );
 }

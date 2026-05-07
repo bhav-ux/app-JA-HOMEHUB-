@@ -25,7 +25,8 @@
       "package": "com.bhavyam_j20.MyExpoApp"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "basePath": "/app-JA-HOMEHUB-/"
     },
     "extra": {
       "eas": {
