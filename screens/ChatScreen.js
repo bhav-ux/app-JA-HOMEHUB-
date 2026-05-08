@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -27,6 +26,7 @@ import {
 } from '../services/chatService';
 import MessageBubble from '../src/components/MessageBubble';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
+import { showAlert, showConfirm } from '../utils/dialogs';
 import { listenToUserDisplayName } from '../utils/user';
 
 const EMOJIS = [
@@ -296,7 +296,7 @@ export default function ChatScreen({ navigation }) {
         soundRef.current = sound;
         setPlayingMessageId(message.id);
       } catch (error) {
-        Alert.alert('Playback error', 'Could not play this voice message.');
+        showAlert('Playback error', 'Could not play this voice message.');
       }
     },
     [playingMessageId, stopCurrentAudio]
@@ -304,22 +304,19 @@ export default function ChatScreen({ navigation }) {
 
   const handleMessageLongPress = (message) => {
     if (!message || message.senderId !== auth.currentUser?.uid || !familyId) return;
-    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const previousMessages = messages;
-          try {
-            setMessages((prev) => prev.filter((m) => m.id !== message.id));
-            await deleteChatMessage({ familyId, messageId: message.id });
-          } catch (error) {
-            setMessages(previousMessages);
-          }
-        },
+    console.log('[ChatScreen] Delete message requested', { familyId, messageId: message.id });
+    showConfirm('Delete Item', 'Are you sure you want to delete this?', {
+      onConfirm: async () => {
+        const previousMessages = messages;
+        try {
+          setMessages((prev) => prev.filter((m) => m.id !== message.id));
+          console.log('[ChatScreen] Confirmed message delete', { familyId, messageId: message.id });
+          await deleteChatMessage({ familyId, messageId: message.id });
+        } catch (error) {
+          setMessages(previousMessages);
+        }
       },
-    ]);
+    });
   };
 
   const renderVoiceBubble = (item, isCurrentUser) => {
@@ -372,13 +369,35 @@ export default function ChatScreen({ navigation }) {
     const isCurrentUser = item.senderId === auth.currentUser?.uid;
     const senderLabel = nameMap[item.senderId] || item.email || item.senderId || 'Unknown sender';
     const timeLabel = item.createdAt ? item.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+    const messageInner = (
+      <View style={[styles.messageRow, isCurrentUser ? styles.rowRight : styles.rowLeft]}>
+        <Text style={[styles.senderText, isCurrentUser && styles.senderTextRight]}>{senderLabel}</Text>
+        {renderMessageBody(item, isCurrentUser)}
+        <Text style={[styles.timeText, isCurrentUser ? styles.timeRight : styles.timeLeft]}>{timeLabel}</Text>
+      </View>
+    );
+
+    if (Platform.OS === 'web') {
+      return (
+        <View style={[styles.webMessageOuter, isCurrentUser ? styles.webMessageOuterRight : styles.webMessageOuterLeft]}>
+          {isCurrentUser && (
+            <TouchableOpacity
+              style={styles.webDeleteBtn}
+              onPress={() => handleMessageLongPress(item)}
+              accessibilityLabel="Delete message"
+            >
+              <Ionicons name="trash-outline" size={14} color={theme.secondaryText} />
+            </TouchableOpacity>
+          )}
+          {messageInner}
+        </View>
+      );
+    }
+
     return (
       <TouchableOpacity activeOpacity={0.9} onLongPress={() => handleMessageLongPress(item)}>
-        <View style={[styles.messageRow, isCurrentUser ? styles.rowRight : styles.rowLeft]}>
-          <Text style={[styles.senderText, isCurrentUser && styles.senderTextRight]}>{senderLabel}</Text>
-          {renderMessageBody(item, isCurrentUser)}
-          <Text style={[styles.timeText, isCurrentUser ? styles.timeRight : styles.timeLeft]}>{timeLabel}</Text>
-        </View>
+        {messageInner}
       </TouchableOpacity>
     );
   };
@@ -583,6 +602,15 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     sendButtonDisabled: { opacity: 0.5 },
     recordingHint: { marginHorizontal: spacing.lg, marginBottom: spacing.xs, color: theme.secondaryText, fontSize: typography.small.fontSize },
     footerSpacing: { height: spacing.sm },
+    webMessageOuter: { flexDirection: 'row', alignItems: 'center' },
+    webMessageOuterRight: { justifyContent: 'flex-end' },
+    webMessageOuterLeft: { justifyContent: 'flex-start' },
+    webDeleteBtn: {
+      padding: 6,
+      marginHorizontal: 4,
+      opacity: 0.5,
+      ...(Platform.OS === 'web' ? { zIndex: 2, elevation: 2, cursor: 'pointer' } : {}),
+    },
     emptyState: { paddingVertical: spacing.xxl, alignItems: 'center', paddingHorizontal: spacing.lg },
     emptyStateText: { color: theme.secondaryText, fontSize: typography.body.fontSize + 1, textAlign: 'center', lineHeight: 22 },
     emojiOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: theme.overlay },

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, SafeAreaView, ScrollView, View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { Animated, Platform, SafeAreaView, ScrollView, View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { auth, db } from '../firebaseConfig';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 import { deleteCalendarEvent } from '../utils/delete';
+import { showAlert, showConfirm } from '../utils/dialogs';
 import AnimatedCard from '../src/components/AnimatedCard';
 
 const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
@@ -166,11 +168,11 @@ export default function CalendarScreen({ navigation }) {
 
   const handleAddNote = () => {
     if (!user) {
-      Alert.alert('Not signed in', 'You need to be signed in to add notes.');
+      showAlert('Not signed in', 'You need to be signed in to add notes.');
       return;
     }
     if (!familyId) {
-      Alert.alert('No family found', 'Please try again later.');
+      showAlert('No family found', 'Please try again later.');
       return;
     }
     navigation.navigate('AddCalendarNote');
@@ -178,39 +180,33 @@ export default function CalendarScreen({ navigation }) {
 
   const handleDeleteCalendarEvent = (eventItem) => {
     if (!user || !familyId || !eventItem?.id) return;
-    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteCalendarEvent({ familyId, eventId: eventItem.id, currentUser: user });
-          } catch (error) {
-            console.error('Failed to delete calendar event', error);
-            Alert.alert('Not allowed', error.message || 'You can only delete your own events');
-          }
-        },
+    console.log('[CalendarScreen] Delete event requested', { familyId, eventId: eventItem.id });
+    showConfirm('Delete Item', 'Are you sure you want to delete this?', {
+      onConfirm: async () => {
+        try {
+          console.log('[CalendarScreen] Confirmed event delete', { familyId, eventId: eventItem.id });
+          await deleteCalendarEvent({ familyId, eventId: eventItem.id, currentUser: user });
+        } catch (error) {
+          console.error('Failed to delete calendar event', error);
+          showAlert('Not allowed', error.message || 'You can only delete your own events');
+        }
       },
-    ]);
+    });
   };
 
   const handleNoteLongPress = (note) => {
     if (!user || !note?.createdBy || note.createdBy !== user.uid || !familyId) return;
-    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteDoc(doc(db, 'families', familyId, 'notes', note.id));
-          } catch (error) {
-            console.error('Failed to delete note', error);
-          }
-        },
+    console.log('[CalendarScreen] Delete note requested', { familyId, noteId: note.id });
+    showConfirm('Delete Item', 'Are you sure you want to delete this?', {
+      onConfirm: async () => {
+        try {
+          console.log('[CalendarScreen] Confirmed note delete', { familyId, noteId: note.id });
+          await deleteDoc(doc(db, 'families', familyId, 'notes', note.id));
+        } catch (error) {
+          console.error('Failed to delete note', error);
+        }
       },
-    ]);
+    });
   };
 
   const renderEventItem = ({ item }) => {
@@ -237,11 +233,37 @@ export default function CalendarScreen({ navigation }) {
     );
   };
 
-  const renderNoteItem = ({ item }) => (
-    <AnimatedCard style={styles.noteCard} onLongPress={() => handleNoteLongPress(item)}>
-      <Text style={styles.noteTitle}>{item.title}</Text>
-    </AnimatedCard>
-  );
+  const renderNoteItem = ({ item }) => {
+    const isOwner = user && item.createdBy === user.uid;
+    if (Platform.OS === 'web') {
+      return (
+        <View style={styles.noteCard}>
+          <View style={styles.noteRow}>
+            <Text style={styles.noteTitle}>{item.title}</Text>
+            {isOwner && (
+              <TouchableOpacity
+                style={styles.noteDeleteBtn}
+                onPress={() => handleNoteLongPress(item)}
+                accessibilityRole="button"
+                accessibilityLabel="Delete note"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="trash-outline" size={16} color={theme.error} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <AnimatedCard style={styles.noteCard} onLongPress={() => handleNoteLongPress(item)}>
+        <View style={styles.noteRow}>
+          <Text style={styles.noteTitle}>{item.title}</Text>
+        </View>
+      </AnimatedCard>
+    );
+  };
 
   const selectedDateValue = toValidDate(selectedDate);
 
@@ -412,6 +434,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderColor: theme.error,
       alignItems: 'center',
       justifyContent: 'center',
+      ...(Platform.OS === 'web' ? { zIndex: 2, elevation: 2, cursor: 'pointer' } : {}),
     },
     eventDescription: { ...typography.body, color: theme.secondaryText, marginTop: spacing.xs },
     noteCard: {
@@ -423,7 +446,14 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderLeftColor: theme.secondaryText,
       ...shadow,
     },
-    noteTitle: { ...typography.heading, color: theme.text },
+    noteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    noteTitle: { ...typography.heading, color: theme.text, flex: 1 },
+    noteDeleteBtn: {
+      padding: 4,
+      marginLeft: spacing.sm,
+      opacity: 0.7,
+      ...(Platform.OS === 'web' ? { zIndex: 2, elevation: 2, cursor: 'pointer' } : {}),
+    },
     fab: {
       position: 'absolute',
       bottom: spacing.lg,

@@ -4,18 +4,19 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Platform,
   RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { deleteAlbum } from '../utils/delete';
+import { showAlert, showConfirm } from '../utils/dialogs';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 import AnimatedCard from '../src/components/AnimatedCard';
 
@@ -31,9 +32,48 @@ const getAlbumPreviewUri = (album) =>
 
 function AlbumCard({ item, onOpen, onDelete, styles, theme }) {
   const previewUri = getAlbumPreviewUri(item);
+  const openLabel = `Open album ${item.name || 'Untitled Album'}`;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.albumCard}>
+        <TouchableOpacity
+          style={styles.albumOpenButton}
+          activeOpacity={0.85}
+          onPress={onOpen}
+          accessibilityRole="button"
+          accessibilityLabel={openLabel}
+        >
+          <View style={styles.previewWrap}>
+            {previewUri ? (
+              <Image source={{ uri: previewUri }} style={styles.previewImage} />
+            ) : (
+              <View style={styles.previewPlaceholder}>
+                <Ionicons name="images-outline" size={20} color={theme.secondaryText} />
+              </View>
+            )}
+          </View>
+          <View style={styles.albumInfo} pointerEvents="none">
+            <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
+            <Text style={styles.albumMeta}>{previewUri ? 'Tap to open album' : 'No preview yet'}</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.deleteButton, styles.webDeleteButton]}
+          activeOpacity={0.7}
+          onPress={onDelete}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete album ${item.name || 'Untitled Album'}`}
+        >
+          <Text style={styles.deleteButtonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <AnimatedCard style={styles.albumCard} onPress={onOpen} accessibilityLabel={`Open album ${item.name || 'Untitled Album'}`}>
+    <AnimatedCard style={styles.albumCard} onPress={onOpen} accessibilityLabel={openLabel}>
       <View style={styles.previewWrap}>
         {previewUri ? (
           <Image source={{ uri: previewUri }} style={styles.previewImage} />
@@ -115,7 +155,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
 
   const handleCreateAlbum = () => {
     if (!familyId) {
-      Alert.alert('Family not set', 'Join or create a family to add albums.');
+      showAlert('Family not set', 'Join or create a family to add albums.');
       return;
     }
     navigation.navigate('CreateAlbum', { familyId });
@@ -132,25 +172,22 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
 
   const handleDeleteAlbum = (album) => {
     if (!auth.currentUser) {
-      Alert.alert('Not signed in', 'You need to be signed in to delete albums.');
+      showAlert('Not signed in', 'You need to be signed in to delete albums.');
       return;
     }
     if (!album?.id || !familyId) return;
-    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteAlbum({ familyId, albumId: album.id });
-          } catch (error) {
-            console.error('Failed to delete album', error);
-            Alert.alert('Delete failed', error.message || 'Could not delete album.');
-          }
-        },
+    console.log('[AlbumsScreen] Delete requested', { albumId: album.id, familyId });
+    showConfirm('Delete Item', 'Are you sure you want to delete this?', {
+      onConfirm: async () => {
+        try {
+          console.log('[AlbumsScreen] Confirmed delete', { albumId: album.id, familyId });
+          await deleteAlbum({ familyId, albumId: album.id });
+        } catch (error) {
+          console.error('Failed to delete album', error);
+          showAlert('Delete failed', error.message || 'Could not delete album.');
+        }
       },
-    ]);
+    });
   };
 
   const renderAlbum = ({ item }) => (
@@ -228,6 +265,13 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderColor: theme.border,
       ...shadow,
     },
+    albumOpenButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: spacing.md,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+    },
     previewWrap: {
       width: 58,
       height: 58,
@@ -246,6 +290,11 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     albumInfo: { flex: 1 },
     albumName: { ...typography.heading, fontSize: typography.heading.fontSize - 1, color: theme.text },
     albumMeta: { marginTop: 3, fontSize: typography.small.fontSize, color: theme.secondaryText },
+    chevron: {
+      marginLeft: spacing.sm,
+      fontSize: 24,
+      color: theme.secondaryText,
+    },
     deleteButton: {
       marginLeft: spacing.md,
       minHeight: 36,
@@ -257,6 +306,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    webDeleteButton: Platform.OS === 'web' ? { zIndex: 3, elevation: 3, cursor: 'pointer' } : {},
     deleteButtonText: { color: theme.error, fontSize: typography.small.fontSize + 1, fontWeight: '700' },
     emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', lineHeight: 22 },
     fab: {

@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -18,6 +19,7 @@ import { auth, db } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
 import { uploadImage } from '../utils/uploadImage';
 import { deletePhoto } from '../utils/delete';
+import { showAlert, showConfirm } from '../utils/dialogs';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function AlbumScreen({ route }) {
@@ -117,47 +119,71 @@ export default function AlbumScreen({ route }) {
 
   const renderItem = ({ item }) => {
     const creatorLabel = nameMap[item.createdBy] || item.createdBy || '';
+    const handleOpenPhoto = () => {
+      if (!item.url) {
+        showAlert('Image unavailable', 'This photo could not be loaded yet.');
+        return;
+      }
+      const nextViewerPhotos = photos.filter((photo) => photo.url);
+      const nextIndex = nextViewerPhotos.findIndex((photo) => photo.id === item.id);
+      if (nextIndex >= 0) {
+        setViewerIndex(nextIndex);
+        setViewerVisible(true);
+      }
+    };
+    const handleDeletePress = () => {
+      if (!auth.currentUser) {
+        showAlert('Not signed in', 'You need to be signed in to delete photos.');
+        return;
+      }
+      console.log('[AlbumScreen] Delete requested', { familyId, albumId, photoId: item.id });
+      showConfirm('Delete Photo', 'Are you sure you want to delete this?', {
+        onConfirm: async () => {
+          try {
+            console.log('[AlbumScreen] Confirmed delete', { familyId, albumId, photoId: item.id });
+            await deletePhoto({ familyId, albumId, photoId: item.id, photoPath: item.path });
+          } catch (error) {
+            console.error('Failed to delete photo', error);
+            showAlert('Delete failed', error.message || 'Could not delete photo.');
+          }
+        },
+      });
+    };
+
+    if (Platform.OS === 'web') {
+      return (
+        <View style={[styles.photoWrapper, styles.webPhotoWrapper]}>
+          <TouchableOpacity style={styles.photoPressArea} activeOpacity={0.9} onPress={handleOpenPhoto} accessibilityRole="button">
+            <View style={styles.photoBox}>
+              {item.url ? (
+                <Image source={{ uri: item.url }} style={styles.photo} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Text style={styles.photoPlaceholderText}>Unavailable</Text>
+                </View>
+              )}
+            </View>
+            {creatorLabel ? <Text style={styles.photoMeta}>{creatorLabel}</Text> : null}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.photoDeleteButton, styles.webPhotoDeleteButton]}
+            onPress={handleDeletePress}
+            accessibilityRole="button"
+            accessibilityLabel="Delete photo"
+          >
+            <Text style={styles.photoDeleteText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     return (
       <TouchableOpacity
         style={styles.photoWrapper}
         activeOpacity={0.9}
-        onPress={() => {
-          if (!item.url) {
-            Alert.alert('Image unavailable', 'This photo could not be loaded yet.');
-            return;
-          }
-          const nextViewerPhotos = photos.filter((photo) => photo.url);
-          const nextIndex = nextViewerPhotos.findIndex((photo) => photo.id === item.id);
-          if (nextIndex >= 0) {
-            setViewerIndex(nextIndex);
-            setViewerVisible(true);
-          }
-        }}
+        onPress={handleOpenPhoto}
       >
-        <TouchableOpacity
-          style={styles.photoDeleteButton}
-          onPress={() => {
-            if (!auth.currentUser) {
-              Alert.alert('Not signed in', 'You need to be signed in to delete photos.');
-              return;
-            }
-            Alert.alert('Delete Photo', 'Are you sure you want to delete this?', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await deletePhoto({ familyId, albumId, photoId: item.id, photoPath: item.path });
-                  } catch (error) {
-                    console.error('Failed to delete photo', error);
-                    Alert.alert('Delete failed', error.message || 'Could not delete photo.');
-                  }
-                },
-              },
-            ]);
-          }}
-        >
+        <TouchableOpacity style={styles.photoDeleteButton} onPress={handleDeletePress}>
           <Text style={styles.photoDeleteText}>Delete</Text>
         </TouchableOpacity>
         <View style={styles.photoBox}>
@@ -228,6 +254,8 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     emptyContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
     columnWrapper: { gap: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: spacing.sm },
     photoWrapper: { flex: 1 / 3, paddingHorizontal: 2 },
+    webPhotoWrapper: { position: 'relative' },
+    photoPressArea: Platform.OS === 'web' ? { cursor: 'pointer' } : {},
     photoDeleteButton: {
       position: 'absolute',
       zIndex: 2,
@@ -241,6 +269,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    webPhotoDeleteButton: Platform.OS === 'web' ? { zIndex: 4, elevation: 4, cursor: 'pointer' } : {},
     photoDeleteText: { color: '#fff', fontSize: 12, fontWeight: '600' },
     photoBox: {
       aspectRatio: 1,

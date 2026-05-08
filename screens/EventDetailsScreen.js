@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { Animated, SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { deleteEvent } from '../utils/delete';
 import { auth } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
+import { showAlert, showConfirm } from '../utils/dialogs';
 import Button from '../src/components/Button';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
@@ -50,24 +51,19 @@ export default function EventDetailsScreen({ route, navigation }) {
       return;
     }
 
-    Alert.alert('Delete Item', 'Are you sure you want to delete this?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setDeleting(true);
-            await deleteEvent({ familyId, eventId: event.id, currentUser: user });
-            navigation.goBack();
-          } catch (error) {
-            console.error('Failed to delete event', error);
-            Alert.alert('Not allowed', error.message || 'You can only delete your own events');
-            setDeleting(false);
-          }
-        },
+    showConfirm('Delete Item', 'Are you sure you want to delete this?', {
+      onConfirm: async () => {
+        try {
+          setDeleting(true);
+          await deleteEvent({ familyId, eventId: event.id, currentUser: user });
+          navigation.goBack();
+        } catch (error) {
+          console.error('Failed to delete event', error);
+          showAlert('Not allowed', error.message || 'You can only delete your own events');
+          setDeleting(false);
+        }
       },
-    ]);
+    });
   };
 
   if (!event) {
