@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import ActionButton from '../src/components/ActionButton';
 import { colors, spacing, typography } from '../src/theme';
 
@@ -9,7 +10,7 @@ export default function HomeScreen({ navigation }) {
     try {
       await signOut(auth);
     } catch (error) {
-      Alert.alert('Logout failed', error.message);
+      Alert.alert('Logout failed', getFirebaseErrorMessage(error, 'Unable to log out right now.'));
     } finally {
       navigation.replace('Login');
     }

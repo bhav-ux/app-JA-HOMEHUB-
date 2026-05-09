@@ -16,6 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
@@ -93,7 +94,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
       });
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', getFirebaseErrorMessage(error, 'Unable to save this note right now.'));
     } finally {
       setSaving(false);
     }

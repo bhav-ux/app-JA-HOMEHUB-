@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View, Alert } from 'react-native';
 import { arrayUnion, collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { createThemedStyles, spacing, typography } from '../src/theme';
@@ -35,7 +36,7 @@ export default function FamilySetupScreen({ navigation }) {
       );
       navigation.replace('MainTabs', { familyId });
     } catch (err) {
-      setError(err.message || 'Failed to create family.');
+      setError(getFirebaseErrorMessage(err, 'Failed to create family.'));
     } finally {
       setLoading(false);
     }
@@ -72,7 +73,7 @@ export default function FamilySetupScreen({ navigation }) {
       );
       navigation.replace('MainTabs', { familyId: code });
     } catch (err) {
-      setError(err.message || 'Failed to join family.');
+      setError(getFirebaseErrorMessage(err, 'Failed to join family.'));
     } finally {
       setLoading(false);
     }

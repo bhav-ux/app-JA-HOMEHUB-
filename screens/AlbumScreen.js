@@ -20,6 +20,7 @@ import { listenToUserDisplayName } from '../utils/user';
 import { uploadImage } from '../utils/uploadImage';
 import { deletePhoto } from '../utils/delete';
 import { showAlert, showConfirm } from '../utils/dialogs';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function AlbumScreen({ route }) {
@@ -111,7 +112,7 @@ export default function AlbumScreen({ route }) {
       });
     } catch (error) {
       console.error('Upload failed', error);
-      Alert.alert('Upload failed', error.message || 'Please try again.');
+      Alert.alert('Upload failed', getFirebaseErrorMessage(error, 'Please try again.'));
     } finally {
       setUploading(false);
     }
@@ -144,7 +145,7 @@ export default function AlbumScreen({ route }) {
             await deletePhoto({ familyId, albumId, photoId: item.id, photoPath: item.path });
           } catch (error) {
             console.error('Failed to delete photo', error);
-            showAlert('Delete failed', error.message || 'Could not delete photo.');
+            showAlert('Delete failed', getFirebaseErrorMessage(error, 'Could not delete photo.'));
           }
         },
       });

@@ -17,6 +17,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { deleteAlbum } from '../utils/delete';
 import { showAlert, showConfirm } from '../utils/dialogs';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 import AnimatedCard from '../src/components/AnimatedCard';
 
@@ -184,7 +185,7 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
           await deleteAlbum({ familyId, albumId: album.id });
         } catch (error) {
           console.error('Failed to delete album', error);
-          showAlert('Delete failed', error.message || 'Could not delete album.');
+          showAlert('Delete failed', getFirebaseErrorMessage(error, 'Could not delete album.'));
         }
       },
     });

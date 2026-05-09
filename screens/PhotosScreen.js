@@ -14,6 +14,7 @@ import { auth, db } from '../firebaseConfig';
 import { colors, radius, shadow, spacing, typography } from '../src/theme';
 import { deleteAlbum } from '../utils/delete';
 import { showAlert, showConfirm } from '../utils/dialogs';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 
 export default function PhotosScreen({ navigation }) {
   const [albums, setAlbums] = useState([]);
@@ -114,7 +115,7 @@ export default function PhotosScreen({ navigation }) {
           }
         } catch (error) {
           console.error('Failed to delete album', error);
-          showAlert('Delete failed', error.message || 'Could not delete album.');
+          showAlert('Delete failed', getFirebaseErrorMessage(error, 'Could not delete album.'));
         } finally {
           longPressFlag.current = false;
         }

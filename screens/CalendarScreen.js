@@ -8,6 +8,7 @@ import { auth, db } from '../firebaseConfig';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 import { deleteCalendarEvent } from '../utils/delete';
 import { showAlert, showConfirm } from '../utils/dialogs';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import AnimatedCard from '../src/components/AnimatedCard';
 
 const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
@@ -188,7 +189,7 @@ export default function CalendarScreen({ navigation }) {
           await deleteCalendarEvent({ familyId, eventId: eventItem.id, currentUser: user });
         } catch (error) {
           console.error('Failed to delete calendar event', error);
-          showAlert('Not allowed', error.message || 'You can only delete your own events');
+          showAlert('Not allowed', getFirebaseErrorMessage(error, 'You can only delete your own events'));
         }
       },
     });

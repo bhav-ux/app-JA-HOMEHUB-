@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
@@ -38,7 +39,7 @@ export default function CreateAlbumScreen({ navigation, route, familyId: familyI
       });
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', getFirebaseErrorMessage(error, 'Unable to create album right now.'));
     } finally {
       setSaving(false);
     }

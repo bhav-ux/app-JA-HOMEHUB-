@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
@@ -77,7 +78,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
           setError('Profile not found.');
         }
       } catch (err) {
-        if (isMounted) setError(err.message);
+        if (isMounted) setError(getFirebaseErrorMessage(err, 'Unable to load your profile.'));
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -129,7 +130,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
         navigation.replace('Login');
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      Alert.alert('Error', getFirebaseErrorMessage(err, 'Unable to log out right now.'));
     }
   }, [navigation]);
 
@@ -166,7 +167,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
       setProfile((prev) => (prev ? { ...prev, displayName: trimmedName } : prev));
       setIsEditingName(false);
     } catch (err) {
-      Alert.alert('Error', err.message || 'Unable to update name right now.');
+      Alert.alert('Error', getFirebaseErrorMessage(err, 'Unable to update name right now.'));
     } finally {
       setSavingName(false);
     }

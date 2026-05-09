@@ -4,6 +4,7 @@ import { deleteEvent } from '../utils/delete';
 import { auth } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
 import { showAlert, showConfirm } from '../utils/dialogs';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
@@ -59,7 +60,7 @@ export default function EventDetailsScreen({ route, navigation }) {
           navigation.goBack();
         } catch (error) {
           console.error('Failed to delete event', error);
-          showAlert('Not allowed', error.message || 'You can only delete your own events');
+          showAlert('Not allowed', getFirebaseErrorMessage(error, 'You can only delete your own events'));
           setDeleting(false);
         }
       },
