@@ -5,6 +5,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Platform,
   KeyboardAvoidingView,
   ScrollView,
@@ -58,8 +59,12 @@ export default function AddCalendarNoteScreen({ navigation }) {
   }, [selectedDate]);
 
   const hasDate = selectedDate !== null;
+  const webDateValue = selectedDate
+    ? `${selectedDate.getFullYear()}-${`${selectedDate.getMonth() + 1}`.padStart(2, '0')}-${`${selectedDate.getDate()}`.padStart(2, '0')}`
+    : '';
 
   const handleDatePicked = (_event, date) => {
+    if (Platform.OS === 'web') return;
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
@@ -67,6 +72,18 @@ export default function AddCalendarNoteScreen({ navigation }) {
     setSelectedDate(date);
     if (Platform.OS === 'ios') {
       setShowDatePicker(false);
+    }
+  };
+
+  const handleWebDatePicked = (event) => {
+    const dateValue = event?.target?.value;
+    if (!dateValue) {
+      setSelectedDate(null);
+      return;
+    }
+    const nextDate = new Date(`${dateValue}T00:00:00`);
+    if (!Number.isNaN(nextDate.getTime())) {
+      setSelectedDate(nextDate);
     }
   };
 
@@ -138,12 +155,27 @@ export default function AddCalendarNoteScreen({ navigation }) {
           <Input label="Title" placeholder="Note title" value={title} onChangeText={setTitle} />
           <View style={styles.field}>
             <Text style={styles.label}>Date</Text>
-            <TouchableOpacity style={styles.dateTimeField} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
-              <Text style={styles.dateTimeLabel}>Select date</Text>
-              <Text style={[styles.dateTimeValue, !formattedDate && styles.placeholder]}>
-                {formattedDate || 'Select Date'}
-              </Text>
-            </TouchableOpacity>
+            {Platform.OS === 'web' ? (
+              <View style={styles.dateTimeField}>
+                <Text style={styles.dateTimeLabel}>Select date</Text>
+                <TouchableWithoutFeedback>
+                  <input
+                    type="date"
+                    value={webDateValue}
+                    onChange={handleWebDatePicked}
+                    style={styles.webDateInput}
+                    aria-label="Select date"
+                  />
+                </TouchableWithoutFeedback>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.dateTimeField} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+                <Text style={styles.dateTimeLabel}>Select date</Text>
+                <Text style={[styles.dateTimeValue, !formattedDate && styles.placeholder]}>
+                  {formattedDate || 'Select Date'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
         <View style={styles.footer}>
@@ -168,7 +200,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
             </View>
           </View>
         </Modal>
-      ) : showDatePicker ? (
+      ) : Platform.OS === 'android' && showDatePicker ? (
         <DateTimePicker value={selectedDate ?? new Date()} mode="date" display="default" onChange={handleDatePicked} />
       ) : null}
     </SafeAreaView>
@@ -204,6 +236,16 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     },
     dateTimeValue: { fontSize: typography.body.fontSize + 3, color: theme.text, fontWeight: '500' },
     placeholder: { color: theme.secondaryText, fontWeight: '400' },
+    webDateInput: {
+      width: '100%',
+      padding: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: radius.sm,
+      fontSize: typography.body.fontSize + 1,
+      color: theme.text,
+      backgroundColor: theme.inputBackground,
+    },
     footer: {
       padding: spacing.lg,
       borderTopWidth: 1,

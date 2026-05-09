@@ -23,6 +23,7 @@ export default function CalendarScreen({ navigation }) {
   const [familyId, setFamilyId] = useState(null);
   const [familyLoading, setFamilyLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
 
   const fabScale = useRef(new Animated.Value(1)).current;
 
@@ -167,7 +168,29 @@ export default function CalendarScreen({ navigation }) {
     [notes, selectedDate]
   );
 
-  const handleAddNote = () => {
+  const upcomingEvents = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return events
+      .filter((event) => {
+        const dateValue = toValidDate(event.date);
+        if (!dateValue) return false;
+        const dateKey = format(dateValue, 'yyyy-MM-dd');
+        return dateValue >= todayStart && dateKey !== selectedDate;
+      })
+      .slice(0, 8);
+  }, [events, selectedDate]);
+
+  const openFabMenu = useCallback(() => setFabMenuOpen(true), []);
+  const closeFabMenu = useCallback(() => setFabMenuOpen(false), []);
+
+  const handleFabPress = useCallback(() => {
+    if (fabMenuOpen) closeFabMenu();
+    else openFabMenu();
+  }, [fabMenuOpen, openFabMenu, closeFabMenu]);
+
+  const handleAddNote = useCallback(() => {
+    closeFabMenu();
     if (!user) {
       showAlert('Not signed in', 'You need to be signed in to add notes.');
       return;
@@ -177,15 +200,26 @@ export default function CalendarScreen({ navigation }) {
       return;
     }
     navigation.navigate('AddCalendarNote');
-  };
+  }, [closeFabMenu, user, familyId, navigation]);
+
+  const handleAddEventFromCalendar = useCallback(() => {
+    closeFabMenu();
+    if (!user) {
+      showAlert('Not signed in', 'You need to be signed in to add events.');
+      return;
+    }
+    if (!familyId) {
+      showAlert('No family found', 'Please try again later.');
+      return;
+    }
+    navigation.navigate('AddEvent');
+  }, [closeFabMenu, user, familyId, navigation]);
 
   const handleDeleteCalendarEvent = (eventItem) => {
     if (!user || !familyId || !eventItem?.id) return;
-    console.log('[CalendarScreen] Delete event requested', { familyId, eventId: eventItem.id });
     showConfirm('Delete Item', 'Are you sure you want to delete this?', {
       onConfirm: async () => {
         try {
-          console.log('[CalendarScreen] Confirmed event delete', { familyId, eventId: eventItem.id });
           await deleteCalendarEvent({ familyId, eventId: eventItem.id, currentUser: user });
         } catch (error) {
           console.error('Failed to delete calendar event', error);
@@ -197,11 +231,9 @@ export default function CalendarScreen({ navigation }) {
 
   const handleNoteLongPress = (note) => {
     if (!user || !note?.createdBy || note.createdBy !== user.uid || !familyId) return;
-    console.log('[CalendarScreen] Delete note requested', { familyId, noteId: note.id });
     showConfirm('Delete Item', 'Are you sure you want to delete this?', {
       onConfirm: async () => {
         try {
-          console.log('[CalendarScreen] Confirmed note delete', { familyId, noteId: note.id });
           await deleteDoc(doc(db, 'families', familyId, 'notes', note.id));
         } catch (error) {
           console.error('Failed to delete note', error);
@@ -212,16 +244,24 @@ export default function CalendarScreen({ navigation }) {
 
   const renderEventItem = ({ item }) => {
     const canDelete = user && item.createdBy === user.uid;
+    const dateValue = toValidDate(item.date);
+    const timeDisplay = item.hasTime && dateValue ? format(dateValue, 'h:mm a') : null;
     return (
-      <View style={styles.eventCard}>
-        <View style={styles.eventTimeContainer}>
-          <Text style={styles.eventTime}>
-            {toValidDate(item.date) ? format(toValidDate(item.date), 'h:mm a') : '—'}
-          </Text>
-        </View>
+      <TouchableOpacity
+        style={styles.eventCard}
+        onPress={() => navigation.navigate('EventDetails', { event: item, familyId })}
+        activeOpacity={0.8}
+      >
+        {timeDisplay ? (
+          <View style={styles.eventTimeContainer}>
+            <Text style={styles.eventTime}>{timeDisplay}</Text>
+          </View>
+        ) : null}
         <View style={styles.eventContent}>
           <View style={styles.eventHeaderRow}>
-            <Text style={styles.eventTitle}>{item.title}</Text>
+            <Text style={styles.eventTitle}>
+              {item.emoji ? `${item.emoji} ` : ''}{item.title}
+            </Text>
             {canDelete ? (
               <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteCalendarEvent(item)}>
                 <Text style={styles.deleteText}>Delete</Text>
@@ -230,7 +270,7 @@ export default function CalendarScreen({ navigation }) {
           </View>
           {item.description ? <Text style={styles.eventDescription}>{item.description}</Text> : null}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -340,13 +380,22 @@ export default function CalendarScreen({ navigation }) {
               }}
               style={styles.calendar}
             />
+
             <View style={styles.eventsSection}>
-              <Text style={styles.dateTitle}>{selectedDateValue ? format(selectedDateValue, 'MMM d, yyyy') : 'Invalid date'}</Text>
+              <Text style={styles.dateTitle}>
+                {selectedDateValue ? format(selectedDateValue, 'MMM d, yyyy') : 'Invalid date'}
+              </Text>
 
               {selectedDateEvents.length > 0 ? (
                 <>
                   <Text style={styles.sectionTitle}>Events ({selectedDateEvents.length})</Text>
-                  <FlatList data={selectedDateEvents} keyExtractor={(item) => item.id} renderItem={renderEventItem} contentContainerStyle={styles.eventsList} scrollEnabled={false} />
+                  <FlatList
+                    data={selectedDateEvents}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderEventItem}
+                    contentContainerStyle={styles.eventsList}
+                    scrollEnabled={false}
+                  />
                 </>
               ) : null}
 
@@ -355,25 +404,82 @@ export default function CalendarScreen({ navigation }) {
                   <Text style={[styles.sectionTitle, selectedDateEvents.length > 0 ? styles.notesSectionTitle : null]}>
                     Notes ({selectedDateNotes.length})
                   </Text>
-                  <FlatList data={selectedDateNotes} keyExtractor={(item) => item.id} renderItem={renderNoteItem} contentContainerStyle={styles.notesList} scrollEnabled={false} />
+                  <FlatList
+                    data={selectedDateNotes}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderNoteItem}
+                    contentContainerStyle={styles.notesList}
+                    scrollEnabled={false}
+                  />
                 </>
               ) : null}
 
               {selectedDateEvents.length === 0 && selectedDateNotes.length === 0 ? (
-                <Text style={styles.emptyText}>No notes for this day.</Text>
+                <Text style={styles.emptyText}>Nothing planned for this day. Tap + to add.</Text>
               ) : null}
             </View>
+
+            {upcomingEvents.length > 0 ? (
+              <View style={styles.upcomingSection}>
+                <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                {upcomingEvents.map((event) => {
+                  const dateValue = toValidDate(event.date);
+                  const dayLabel = dateValue ? format(dateValue, 'EEE, MMM d') : '—';
+                  const timeLabel = event.hasTime && dateValue ? `  ·  ${format(dateValue, 'h:mm a')}` : '';
+                  return (
+                    <TouchableOpacity
+                      key={event.id}
+                      style={styles.upcomingCard}
+                      onPress={() => navigation.navigate('EventDetails', { event, familyId })}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.upcomingDate}>{dayLabel}{timeLabel}</Text>
+                      <Text style={styles.upcomingTitle} numberOfLines={1}>
+                        {event.emoji ? `${event.emoji} ` : ''}{event.title}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
           </ScrollView>
         )}
+
+        {fabMenuOpen ? (
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={closeFabMenu}
+            style={styles.fabBackdrop}
+          />
+        ) : null}
+
+        {fabMenuOpen ? (
+          <View style={[styles.fabSpeedItem, { bottom: spacing.lg + 64 }]}>
+            <Text style={styles.fabSpeedLabel}>Add Note</Text>
+            <TouchableOpacity style={styles.fabMini} onPress={handleAddNote}>
+              <Ionicons name="pencil-outline" size={20} color={theme.secondaryText} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {fabMenuOpen ? (
+          <View style={[styles.fabSpeedItem, { bottom: spacing.lg + 120 }]}>
+            <Text style={styles.fabSpeedLabel}>Add Event</Text>
+            <TouchableOpacity style={styles.fabMini} onPress={handleAddEventFromCalendar}>
+              <Ionicons name="calendar-outline" size={20} color={theme.primary} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
           <TouchableOpacity
             style={styles.fabTouchable}
-            onPress={handleAddNote}
+            onPress={handleFabPress}
             onPressIn={onFabPressIn}
             onPressOut={onFabPressOut}
             activeOpacity={0.9}
           >
-            <Text style={styles.fabText}>+</Text>
+            <Text style={styles.fabText}>{fabMenuOpen ? '×' : '+'}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -393,7 +499,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       color: theme.text,
     },
     scrollView: { flex: 1 },
-    scrollContent: { paddingBottom: 88 },
+    scrollContent: { paddingBottom: 100 },
     calendar: {
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
@@ -407,8 +513,8 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     dateTitle: { fontSize: typography.heading.fontSize + 2, fontWeight: '700', color: theme.text, marginBottom: spacing.md },
     sectionTitle: { ...typography.heading, color: theme.secondaryText, marginBottom: spacing.sm },
     notesSectionTitle: { marginTop: spacing.lg },
-    eventsList: { paddingBottom: spacing.xl },
-    notesList: { paddingBottom: spacing.xl },
+    eventsList: { paddingBottom: spacing.sm },
+    notesList: { paddingBottom: spacing.sm },
     emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', marginTop: spacing.lg },
     eventCard: {
       flexDirection: 'row',
@@ -420,11 +526,11 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderLeftColor: theme.primary,
       ...shadow,
     },
-    eventTimeContainer: { marginRight: spacing.md, minWidth: 70 },
-    eventTime: { fontSize: typography.body.fontSize + 1, fontWeight: '700', color: theme.primary },
+    eventTimeContainer: { marginRight: spacing.md, minWidth: 62 },
+    eventTime: { fontSize: typography.body.fontSize, fontWeight: '700', color: theme.primary },
     eventContent: { flex: 1 },
     eventHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-    eventTitle: { ...typography.heading, color: theme.text },
+    eventTitle: { ...typography.heading, color: theme.text, flex: 1 },
     deleteText: { color: theme.error, fontSize: 13, fontWeight: '700' },
     deleteButton: {
       minHeight: 32,
@@ -455,6 +561,70 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       opacity: 0.7,
       ...(Platform.OS === 'web' ? { zIndex: 2, elevation: 2, cursor: 'pointer' } : {}),
     },
+    upcomingSection: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    upcomingCard: {
+      backgroundColor: theme.card,
+      borderRadius: radius.md,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.md,
+      marginBottom: spacing.sm,
+      borderLeftWidth: 2,
+      borderLeftColor: theme.primary,
+      ...shadow,
+    },
+    upcomingDate: {
+      fontSize: typography.small.fontSize,
+      color: theme.primary,
+      fontWeight: '600',
+      marginBottom: 2,
+    },
+    upcomingTitle: {
+      fontSize: typography.body.fontSize,
+      color: theme.text,
+      fontWeight: '500',
+    },
+    fabBackdrop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.18)',
+      zIndex: 10,
+    },
+    fabSpeedItem: {
+      position: 'absolute',
+      right: spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      zIndex: 11,
+    },
+    fabSpeedLabel: {
+      backgroundColor: theme.card,
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: 4,
+      borderRadius: radius.sm,
+      fontSize: 13,
+      color: theme.text,
+      fontWeight: '600',
+      ...shadow,
+    },
+    fabMini: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+      ...shadow,
+    },
     fab: {
       position: 'absolute',
       bottom: spacing.lg,
@@ -464,6 +634,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderRadius: 28,
       backgroundColor: theme.primary,
       overflow: 'hidden',
+      zIndex: 12,
       ...shadow,
     },
     fabTouchable: { flex: 1, alignItems: 'center', justifyContent: 'center' },

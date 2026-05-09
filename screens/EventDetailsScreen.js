@@ -37,13 +37,21 @@ export default function EventDetailsScreen({ route, navigation }) {
     if (!event?.date) return 'No date available';
     const dateValue = event.date?.toDate ? event.date.toDate() : event.date instanceof Date ? event.date : new Date(event.date);
     if (Number.isNaN(dateValue.getTime())) return 'Invalid date';
-    return dateValue.toLocaleString(undefined, {
+    if (event.hasTime) {
+      return dateValue.toLocaleString(undefined, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
+    return dateValue.toLocaleDateString(undefined, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
     });
   }, [event]);
 

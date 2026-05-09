@@ -12,7 +12,7 @@ import SignupScreen from './screens/SignupScreen';
 import EventsScreen from './screens/EventsScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import AlbumsScreen from './screens/AlbumsScreen';
-import ChatScreen from './screens/ChatScreen';
+import ChatsHomeScreen from './screens/ChatsHomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import AddEventScreen from './screens/AddEventScreen';
 import AddCalendarNoteScreen from './screens/AddCalendarNoteScreen';
@@ -21,6 +21,8 @@ import AlbumScreen from './screens/AlbumScreen';
 import EventDetailsScreen from './screens/EventDetailsScreen';
 import FamilySetupScreen from './screens/FamilySetupScreen';
 import HomeDashboardScreen from './screens/HomeDashboardScreen';
+import ConversationScreen from './screens/ConversationScreen';
+import NewChatScreen from './screens/NewChatScreen';
 import { auth, db } from './firebaseConfig';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { getNavigationTheme } from './src/theme';
@@ -63,7 +65,7 @@ function MainTabs({ familyId, route }) {
       <Tab.Screen name="Albums">
         {(props) => <AlbumsScreen {...props} familyId={familyIdValue} />}
       </Tab.Screen>
-      <Tab.Screen name="Chat" component={ChatScreen} options={{ tabBarLabel: 'Chat' }} />
+      <Tab.Screen name="Chat" component={ChatsHomeScreen} options={{ tabBarLabel: 'Chat' }} />
       <Tab.Screen
         name="Profile"
         options={{
@@ -124,20 +126,20 @@ function AppNavigator() {
 
   useEffect(() => {
     if (!user?.uid) return;
-  
+
     const savePushToken = async () => {
       try {
         const token = await registerForPushNotificationsAsync();
-  
+
         console.log('EXPO PUSH TOKEN:', token);
-  
+
         if (!token) {
           alert('No push token received');
           return;
         }
-  
+
         alert(`Push token received:\n\n${token}`);
-  
+
         await setDoc(
           doc(db, 'users', user.uid),
           { expoPushToken: token },
@@ -145,11 +147,11 @@ function AppNavigator() {
         );
       } catch (error) {
         console.error('Failed to register push token', error);
-  
+
         alert(`Push registration failed:\n\n${error.message}`);
       }
     };
-  
+
     savePushToken();
   }, [user?.uid]);
 
@@ -206,6 +208,16 @@ function AppNavigator() {
           name="Album"
           component={AlbumScreen}
           options={({ route }) => ({ title: route.params?.albumName || 'Album' })}
+        />
+        <Stack.Screen
+          name="Conversation"
+          component={ConversationScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="NewChat"
+          component={NewChatScreen}
+          options={{ title: 'New Chat', headerTitleAlign: 'center' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

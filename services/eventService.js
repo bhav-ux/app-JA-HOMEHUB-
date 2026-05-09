@@ -52,6 +52,7 @@ export async function createEvent({
   emoji,
   description,
   date,
+  hasTime,
   createdBy,
   createdByEmail,
 }) {
@@ -70,7 +71,8 @@ export async function createEvent({
       throw new Error('Event title is required');
     }
 
-    const eventDate = date instanceof Date ? date : new Date(date);
+    const eventDate = date instanceof Date ? new Date(date) : new Date(date);
+    if (!hasTime) eventDate.setHours(0, 0, 0, 0);
 
     if (Number.isNaN(eventDate.getTime())) {
       throw new Error('Event date is invalid');
@@ -83,6 +85,7 @@ export async function createEvent({
       emoji: trimmedEmoji,
       description: description?.trim() || '',
       date: eventDate,
+      hasTime: !!hasTime,
       createdBy,
       createdByEmail: createdByEmail || null,
       createdAt: serverTimestamp(),
