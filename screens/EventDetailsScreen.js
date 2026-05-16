@@ -60,7 +60,7 @@ export default function EventDetailsScreen({ route, navigation }) {
       return;
     }
 
-    showConfirm('Delete Item', 'Are you sure you want to delete this?', {
+    showConfirm('Remove Event', 'This will remove the event for your whole family.', {
       onConfirm: async () => {
         try {
           setDeleting(true);
@@ -79,22 +79,22 @@ export default function EventDetailsScreen({ route, navigation }) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContent}>
-          <Text style={styles.infoText}>Event not found.</Text>
+          <Text style={styles.infoText}>This event isn't available.</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   const canDelete = user && event.createdBy === user.uid;
-  const creatorLabel = creatorName || event.createdByEmail || event.createdBy || 'Unknown';
+  const creatorLabel = creatorName || event.createdByEmail || null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Animated.View style={[styles.animContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <Animated.View style={[styles.animContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]} pointerEvents="auto">
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>{event.title}</Text>
           <Text style={styles.date}>{dateLabel}</Text>
-          {creatorLabel ? <Text style={styles.meta}>Created by: {creatorLabel}</Text> : null}
+          {creatorLabel ? <Text style={styles.meta}>Added by {creatorLabel}</Text> : null}
           {event.description ? <Text style={styles.description}>{event.description}</Text> : null}
           {canDelete ? (
             <Button label={deleting ? 'Deleting Event...' : 'Delete Event'} onPress={handleDelete} loading={deleting} variant="danger" />

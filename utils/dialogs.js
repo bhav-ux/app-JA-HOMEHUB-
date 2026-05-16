@@ -17,11 +17,15 @@ export function showAlert(title, message, buttons, options) {
   buttons?.[0]?.onPress?.();
 }
 
-export function showConfirm(title, message, { onConfirm, onCancel } = {}) {
+export function showConfirm(
+  title,
+  message,
+  { onConfirm, onCancel, confirmText = 'Delete', cancelText = 'Cancel' } = {}
+) {
   if (Platform.OS !== 'web') {
     Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel', onPress: onCancel },
-      { text: 'Delete', style: 'destructive', onPress: onConfirm },
+      { text: cancelText, style: 'cancel', onPress: onCancel },
+      { text: confirmText, style: 'destructive', onPress: onConfirm },
     ]);
     return;
   }

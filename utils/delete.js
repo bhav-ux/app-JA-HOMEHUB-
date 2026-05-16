@@ -1,6 +1,12 @@
-import { collection, deleteDoc, doc, getDoc, getDocs } from 'firebase/firestore';
+import { arrayRemove, collection, deleteDoc, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { deleteObject, ref } from 'firebase/storage';
 import { db, storage } from '../firebaseConfig';
+
+export const leaveFamily = async ({ uid, familyId }) => {
+  if (!uid || !familyId) throw new Error('Missing user or family information');
+  await updateDoc(doc(db, 'families', familyId), { members: arrayRemove(uid) });
+  await updateDoc(doc(db, 'users', uid), { familyId: null });
+};
 
 const buildOwnerError = () => {
   const error = new Error('You can only delete your own events');

@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { Animated, Pressable } from 'react-native';
 
 const SPRING = { tension: 300, friction: 20, useNativeDriver: true };
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function AnimatedCard({
   onPress,
@@ -26,16 +25,18 @@ export default function AnimatedCard({
   };
 
   return (
-    <AnimatedPressable
-      style={[style, { transform: [{ scale }] }]}
-      onPress={disabled ? undefined : onPress}
-      onLongPress={disabled ? undefined : onLongPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-    >
-      {children}
-    </AnimatedPressable>
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        style={style}
+        onPress={disabled ? undefined : onPress}
+        onLongPress={disabled ? undefined : onLongPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
   );
 }

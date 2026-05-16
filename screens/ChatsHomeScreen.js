@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import {
   createOrGetDM,
@@ -123,12 +123,15 @@ export default function ChatsHomeScreen({ navigation }) {
 
   useEffect(() => {
     if (!currentUser?.uid) return;
-    getDoc(doc(db, 'users', currentUser.uid))
-      .then((snap) => {
+    const unsub = onSnapshot(
+      doc(db, 'users', currentUser.uid),
+      (snap) => {
         setFamilyId(snap.exists() ? snap.data()?.familyId || null : null);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      },
+      () => setLoading(false)
+    );
+    return unsub;
   }, [currentUser?.uid]);
 
   useEffect(() => {

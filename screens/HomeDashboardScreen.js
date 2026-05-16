@@ -18,15 +18,17 @@ import { createThemedStyles, spacing, useAppTheme } from '../src/theme';
 import AnimatedCard from '../src/components/AnimatedCard';
 
 const AVATAR_PALETTE = [
-  '#F59E0B',
-  '#F43F5E',
-  '#7C3AED',
-  '#0D9488',
-  '#EA580C',
-  '#4F46E5',
-  '#DB2777',
-  '#059669',
+  '#7B93C8',
+  '#D4896A',
+  '#76A895',
+  '#9E7DC4',
+  '#6BA4C4',
+  '#C4956A',
+  '#89B488',
+  '#B07AB0',
 ];
+
+const MAX_VISIBLE_AVATARS = 5;
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -172,6 +174,12 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
     });
   }, [familyId]);
 
+  const memberNameMap = useMemo(() => {
+    const map = {};
+    members.forEach((m) => { map[m.uid] = m.name; });
+    return map;
+  }, [members]);
+
   const upcomingEvent = useMemo(() => {
     const now = new Date();
     return events.find((e) => {
@@ -189,29 +197,38 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
     const items = [];
     if (messages.length > 0) {
       const last = messages[messages.length - 1];
-      const sender = last.email ? last.email.split('@')[0] : 'Family';
+      const senderName = memberNameMap[last.senderId]
+        || last.email?.split('@')[0]
+        || 'Someone';
       items.push({
         id: `msg-${last.id}`,
         icon: 'chatbubble-ellipses-outline',
         text: last.type === 'voice'
-          ? `${sender} sent a voice message`
-          : `${sender} said something in chat`,
+          ? `${senderName} sent a voice message`
+          : `${senderName} sent a message`,
         date: last.createdAt instanceof Date ? last.createdAt : null,
         onPress: () => navigation.navigate('Chat'),
       });
     }
     [...events].reverse().slice(0, 4).forEach((event) => {
+      const creatorName = memberNameMap[event.createdBy]
+        || event.createdByEmail?.split('@')[0]
+        || null;
+      const eventLabel = `${event.emoji ? event.emoji + ' ' : ''}${event.title}`;
+      const text = creatorName
+        ? `${creatorName} added ${eventLabel}`
+        : `${eventLabel} added to calendar`;
       items.push({
         id: `event-${event.id}`,
         icon: 'calendar-outline',
-        text: `${event.emoji ? event.emoji + ' ' : ''}${event.title} was added`,
+        text,
         date: normalizeDate(event.date),
         onPress: () => navigation.navigate('EventDetails', { event, familyId }),
       });
     });
     items.sort((a, b) => (b.date || new Date(0)) - (a.date || new Date(0)));
     return items.slice(0, 5);
-  }, [events, messages, navigation, familyId]);
+  }, [events, messages, navigation, familyId, memberNameMap]);
 
   const handleAddEvent = () => {
     if (!user) { Alert.alert('Not signed in', 'Please sign in to add events.'); return; }
@@ -224,11 +241,14 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
   };
 
   const quickActions = [
-    { label: 'Event', icon: 'add-circle-outline', onPress: handleAddEvent },
+    { label: 'Event', icon: 'calendar-outline', onPress: handleAddEvent },
     { label: 'Chat', icon: 'chatbubble-outline', onPress: () => navigation.navigate('Chat') },
     { label: 'Album', icon: 'images-outline', onPress: handleCreateAlbum },
-    { label: 'Note', icon: 'document-text-outline', onPress: () => navigation.navigate('AddCalendarNote') },
+    { label: 'Note', icon: 'create-outline', onPress: () => navigation.navigate('AddCalendarNote') },
   ];
+
+  const visibleMembers = members.slice(0, MAX_VISIBLE_AVATARS);
+  const overflowCount = Math.max(0, members.length - MAX_VISIBLE_AVATARS);
 
   let focusState = 'loading';
   if (!eventsLoading) {
@@ -239,15 +259,15 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Animated.ScrollView
-        style={{ opacity: fadeAnim }}
+      <Animated.View style={[styles.flex, { opacity: fadeAnim }]} pointerEvents="auto">
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
+        {/* Header */}
         <Animated.View style={[styles.heroSection, { transform: [{ translateY: slideAnim }] }]}>
           <Text style={styles.greetingText}>
-            {greeting},{'\n'}
+            {greeting},{' '}
             <Text style={styles.greetingName}>{getDisplayName(user)}</Text>
           </Text>
           <Text style={styles.dateText}>{getTodayLabel()}</Text>
@@ -259,7 +279,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
 
           {focusState === 'loading' && (
             <View style={[styles.focusCard, styles.focusCardLoading]}>
-              <ActivityIndicator size="small" color={`${theme.primary}66`} />
+              <ActivityIndicator size="small" color={`${theme.primary}88`} />
             </View>
           )}
 
@@ -274,14 +294,14 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
                 <View style={styles.focusIconWrap}>
                   {upcomingEvent.emoji
                     ? <Text style={styles.focusEmoji}>{upcomingEvent.emoji}</Text>
-                    : <Ionicons name="calendar-outline" size={22} color={theme.primary} />
+                    : <Ionicons name="calendar-outline" size={20} color={theme.primary} />
                   }
                 </View>
                 <View style={styles.focusBody}>
                   <Text style={styles.focusTitle} numberOfLines={2}>{upcomingEvent.title}</Text>
                   <Text style={styles.focusDate}>{formatRelativeDate(upcomingEvent.date)}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={`${theme.primary}55`} />
+                <Ionicons name="chevron-forward" size={15} color={`${theme.primary}66`} />
               </View>
             </AnimatedCard>
           )}
@@ -294,12 +314,12 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
               scaleDown={0.98}
             >
               <View style={styles.focusRow}>
-                <View style={[styles.focusIconWrap, styles.focusIconWrapMsg]}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.primary} />
+                <View style={styles.focusIconWrap}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={19} color={theme.primary} />
                 </View>
                 <View style={styles.focusBody}>
                   <Text style={styles.focusSender}>
-                    {latestMessage.email ? latestMessage.email.split('@')[0] : 'Family'}
+                    {memberNameMap[latestMessage.senderId] || latestMessage.email?.split('@')[0] || 'Family'}
                   </Text>
                   <Text style={styles.focusMessage} numberOfLines={2}>
                     {latestMessage.type === 'voice'
@@ -309,7 +329,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
                           : latestMessage.text}"`}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={`${theme.primary}55`} />
+                <Ionicons name="chevron-forward" size={15} color={`${theme.primary}66`} />
               </View>
             </AnimatedCard>
           )}
@@ -323,18 +343,20 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
           )}
         </View>
 
-        {/* Quick Action Pills */}
-        <View style={styles.pillsRow}>
-          {quickActions.map(({ label, icon, onPress }, i) => (
+        {/* Quick Actions */}
+        <View style={styles.actionsGrid}>
+          {quickActions.map(({ label, icon, onPress }) => (
             <AnimatedCard
               key={label}
-              style={[styles.pill, i < quickActions.length - 1 && styles.pillGap]}
+              style={styles.actionBtn}
               onPress={onPress}
               accessibilityLabel={label}
-              scaleDown={0.93}
+              scaleDown={0.95}
             >
-              <Ionicons name={icon} size={15} color={theme.primary} style={styles.pillIcon} />
-              <Text style={styles.pillLabel}>{label}</Text>
+              <View style={styles.actionIconWrap}>
+                <Ionicons name={icon} size={20} color={theme.primary} />
+              </View>
+              <Text style={styles.actionLabel}>{label}</Text>
             </AnimatedCard>
           ))}
         </View>
@@ -348,7 +370,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.familyScrollContent}
             >
-              {members.map((member, i) => (
+              {visibleMembers.map((member, i) => (
                 <View key={member.uid} style={styles.avatarWrap}>
                   <View style={[styles.avatar, { backgroundColor: getAvatarColor(member.name, i) }]}>
                     <Text style={styles.avatarInitials}>{getInitials(member.name)}</Text>
@@ -358,15 +380,23 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
                   </Text>
                 </View>
               ))}
+              {overflowCount > 0 && (
+                <View style={styles.avatarWrap}>
+                  <View style={styles.avatarOverflow}>
+                    <Text style={styles.avatarOverflowText}>+{overflowCount}</Text>
+                  </View>
+                  <Text style={styles.avatarName}> </Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         )}
 
-        {/* Recent Activity Timeline */}
+        {/* Recent Activity */}
         {recentActivity.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionChip}>RECENT</Text>
-            <View style={styles.timelineCard}>
+            <View>
               {recentActivity.map((item, i) => (
                 <AnimatedCard
                   key={item.id}
@@ -379,7 +409,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
                   scaleDown={0.98}
                 >
                   <View style={styles.timelineDot}>
-                    <Ionicons name={item.icon} size={13} color={theme.primary} />
+                    <Ionicons name={item.icon} size={12} color={theme.primary} />
                   </View>
                   <Text style={styles.timelineText} numberOfLines={2}>
                     {item.text}
@@ -394,7 +424,8 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
         )}
 
         <View style={styles.bottomPad} />
-      </Animated.ScrollView>
+      </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -405,39 +436,41 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       flex: 1,
       backgroundColor: theme.background,
     },
+    flex: {
+      flex: 1,
+    },
     scrollContent: {
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.md,
+      paddingTop: 14,
     },
 
-    // Hero
+    // Header
     heroSection: {
-      paddingBottom: spacing.xl + 4,
+      paddingBottom: 20,
     },
     greetingText: {
-      fontSize: 32,
-      fontWeight: '300',
+      fontSize: 26,
+      fontWeight: '500',
       color: theme.text,
-      letterSpacing: -0.6,
-      lineHeight: 40,
+      letterSpacing: -0.4,
     },
     greetingName: {
-      fontSize: 32,
+      fontSize: 26,
       fontWeight: '700',
       color: theme.text,
-      letterSpacing: -0.8,
+      letterSpacing: -0.6,
     },
     dateText: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.secondaryText,
-      marginTop: 8,
+      marginTop: 5,
       fontWeight: '400',
       letterSpacing: 0.1,
     },
 
-    // Section label
+    // Section
     section: {
-      marginBottom: spacing.xl,
+      marginBottom: 20,
     },
     sectionChip: {
       fontSize: 10,
@@ -445,172 +478,185 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       color: theme.secondaryText,
       letterSpacing: 1.5,
       textTransform: 'uppercase',
-      marginBottom: 10,
+      marginBottom: 8,
     },
 
     // Today Focus Card
     focusCard: {
-      backgroundColor: theme.card,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: `${theme.primary}18`,
-      padding: spacing.md + 2,
+      backgroundColor: theme.primaryLight,
+      borderRadius: 18,
+      padding: spacing.md,
       ...shadow,
     },
     focusCardLoading: {
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 76,
+      minHeight: 68,
     },
     focusRow: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     focusIconWrap: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: `${theme.primary}0F`,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.75)',
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 14,
     },
-    focusIconWrapMsg: {
-      backgroundColor: `${theme.primary}0C`,
-    },
     focusEmoji: {
-      fontSize: 24,
+      fontSize: 22,
     },
     focusBody: {
       flex: 1,
       marginRight: 6,
     },
     focusTitle: {
-      fontSize: 17,
+      fontSize: 16,
       fontWeight: '600',
       color: theme.text,
       letterSpacing: -0.2,
-      lineHeight: 23,
+      lineHeight: 22,
     },
     focusDate: {
-      fontSize: 13,
+      fontSize: 12,
       color: theme.secondaryText,
       marginTop: 3,
     },
     focusSender: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
       color: theme.primary,
       letterSpacing: 0.2,
       marginBottom: 3,
     },
     focusMessage: {
-      fontSize: 15,
+      fontSize: 14,
       color: theme.text,
-      lineHeight: 21,
+      lineHeight: 20,
     },
     focusCardEmpty: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: spacing.xl,
+      paddingVertical: 20,
     },
     focusEmptyIcon: {
-      fontSize: 34,
-      marginBottom: 10,
+      fontSize: 28,
+      marginBottom: 8,
     },
     focusEmptyTitle: {
-      fontSize: 17,
+      fontSize: 15,
       fontWeight: '600',
       color: theme.text,
       letterSpacing: -0.2,
     },
     focusEmptySubtitle: {
-      fontSize: 13,
+      fontSize: 12,
       color: theme.secondaryText,
-      marginTop: 5,
+      marginTop: 4,
     },
 
-    // Quick Action Pills
-    pillsRow: {
+    // Quick Actions
+    actionsGrid: {
       flexDirection: 'row',
-      marginBottom: spacing.xl + 4,
+      alignItems: 'stretch',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginHorizontal: -4,
+      marginBottom: 18,
     },
-    pill: {
+    actionBtn: {
       flex: 1,
-      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: `${theme.primary}0D`,
-      borderRadius: 50,
-      paddingVertical: 10,
-      paddingHorizontal: 4,
+      backgroundColor: theme.card,
+      minHeight: 80,
+      borderRadius: 17,
+      paddingVertical: 14,
+      paddingHorizontal: 6,
+      ...shadow,
     },
-    pillGap: {
-      marginRight: 8,
+    actionIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: theme.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 9,
     },
-    pillIcon: {
-      marginRight: 4,
-    },
-    pillLabel: {
+    actionLabel: {
       fontSize: 11,
       fontWeight: '600',
-      color: theme.primary,
+      color: theme.text,
       letterSpacing: 0.1,
+      lineHeight: 13,
+      textAlign: 'center',
     },
 
     // Family Snapshot
     familyScrollContent: {
       paddingRight: spacing.sm,
+      gap: 16,
     },
     avatarWrap: {
       alignItems: 'center',
-      marginRight: 18,
     },
     avatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 6,
     },
     avatarInitials: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color: '#FFFFFF',
-      letterSpacing: 0.4,
+      letterSpacing: 0.3,
     },
     avatarName: {
       fontSize: 11,
       color: theme.secondaryText,
       fontWeight: '500',
-      maxWidth: 52,
+      maxWidth: 48,
       textAlign: 'center',
     },
-
-    // Recent Activity Timeline
-    timelineCard: {
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: theme.border,
-      overflow: 'hidden',
+    avatarOverflow: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 6,
     },
+    avatarOverflowText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.secondaryText,
+      letterSpacing: 0.2,
+    },
+
+    // Recent Activity
     timelineRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 13,
-      paddingHorizontal: 14,
+      paddingVertical: 10,
+      paddingHorizontal: 2,
     },
     timelineRowDivider: {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.border,
     },
     timelineDot: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: `${theme.primary}0D`,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 12,
@@ -630,7 +676,7 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
     },
 
     bottomPad: {
-      height: spacing.xl + 16,
+      height: 40,
     },
   })
 );

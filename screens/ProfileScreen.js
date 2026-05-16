@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
   Alert,
   Switch,
+  Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { Share } from 'react-native';
 import {
@@ -25,6 +27,8 @@ import {
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
+import { leaveFamily } from '../utils/delete';
+import { showAlert, showConfirm } from '../utils/dialogs';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
@@ -173,6 +177,30 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     }
   };
 
+  const handleLeaveFamily = useCallback(() => {
+    if (!user?.uid || !familyId) return;
+    showConfirm(
+      'Leave Family',
+      "You'll lose access to this family's events, chats, and albums.",
+      {
+        confirmText: 'Leave',
+        onConfirm: async () => {
+          try {
+            await leaveFamily({ uid: user.uid, familyId });
+            const rootNavigator = navigation.getParent();
+            if (rootNavigator) {
+              rootNavigator.replace('FamilySetup');
+            } else {
+              navigation.replace('FamilySetup');
+            }
+          } catch (err) {
+            showAlert('Error', getFirebaseErrorMessage(err, 'Unable to leave family right now.'));
+          }
+        },
+      }
+    );
+  }, [user?.uid, familyId, navigation]);
+
   const displayNameValue = profile?.displayName?.trim() || '';
   const avatarLetter =
     displayNameValue?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?';
@@ -185,7 +213,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Animated.View style={[styles.flex, { opacity: contentFade }]}>
+      <Animated.View style={[styles.flex, { opacity: contentFade }]} pointerEvents="auto">
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -200,7 +228,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
                 <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
                   <Text style={styles.avatarLetter}>{avatarLetter}</Text>
                 </View>
-                <Text style={styles.headerName}>{displayNameValue || 'No name set'}</Text>
+                <Text style={styles.headerName}>{displayNameValue || 'Add your name'}</Text>
                 <Text style={styles.headerEmail}>{user.email}</Text>
                 {familyId ? (
                   <View style={styles.familyCodeRow}>
@@ -224,7 +252,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
           <Text style={styles.sectionTitle}>Family</Text>
           <View style={styles.card}>
             {!familyId || (!membersLoading && familyMembers.length === 0) ? (
-              <Text style={styles.emptyText}>No family members found.</Text>
+              <Text style={styles.emptyText}>Your family will appear here.</Text>
             ) : membersLoading ? (
               <View style={styles.cardPad}>
                 <ActivityIndicator color={theme.primary} />
@@ -261,6 +289,18 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
                 );
               })
             )}
+            {familyId ? (
+              <TouchableOpacity
+                style={styles.leaveRow}
+                onPress={handleLeaveFamily}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Leave Family"
+              >
+                <Ionicons name="log-out-outline" size={17} color={theme.error} />
+                <Text style={[styles.leaveLabel, { color: theme.error }]}>Leave Family</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           {/* ── SECTION 3: PREFERENCES ──────────────────────── */}
@@ -286,7 +326,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
                 <Input
                   value={nameInput}
                   onChangeText={setNameInput}
-                  placeholder="Enter display name"
+                  placeholder="Your name"
                 />
                 <View style={styles.editActions}>
                   <Button
@@ -512,6 +552,22 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       fontSize: typography.body.fontSize,
       color: theme.secondaryText,
       textAlign: 'center',
+    },
+    leaveRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.border,
+      ...(Platform.OS === 'web'
+        ? { position: 'relative', zIndex: 2, elevation: 2, cursor: 'pointer' }
+        : {}),
+    },
+    leaveLabel: {
+      fontSize: typography.body.fontSize + 1,
+      fontWeight: '600',
     },
     error: {
       color: theme.error,

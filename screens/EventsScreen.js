@@ -153,7 +153,7 @@ export default function EventsScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContent}>
-          <Text style={styles.infoText}>No family found for your account.</Text>
+          <Text style={styles.infoText}>Set up or join a family to see events.</Text>
         </View>
       </SafeAreaView>
     );
@@ -177,7 +177,8 @@ export default function EventsScreen({ navigation }) {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <Text style={styles.infoText}>{"No family events yet.\nTap + to create one."}</Text>
+                <Text style={styles.emptyEmoji}>📅</Text>
+                <Text style={styles.infoText}>{"No plans yet\nTap + to add something together"}</Text>
               </View>
             }
           />
@@ -207,6 +208,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     listContent: { paddingBottom: spacing.xxl + 40 },
     emptyListContent: { flexGrow: 1, paddingBottom: spacing.xxl + 40 },
     emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
+    emptyEmoji: { fontSize: 36, marginBottom: 12 },
     infoText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', lineHeight: 22 },
     eventItem: {
       backgroundColor: theme.card,
