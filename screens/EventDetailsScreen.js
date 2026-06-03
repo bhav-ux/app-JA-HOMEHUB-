@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteEvent } from '../utils/delete';
 import { auth } from '../firebaseConfig';
 import { listenToUserDisplayName } from '../utils/user';
@@ -11,6 +12,7 @@ import { createThemedStyles, spacing, typography, useAppTheme } from '../src/the
 export default function EventDetailsScreen({ route, navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const { event, familyId: passedFamilyId } = route.params || {};
   const user = auth.currentUser;
   const [deleting, setDeleting] = useState(false);
@@ -89,9 +91,9 @@ export default function EventDetailsScreen({ route, navigation }) {
   const creatorLabel = creatorName || event.createdByEmail || null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <Animated.View style={[styles.animContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]} pointerEvents="auto">
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.lg + insets.bottom }]} showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>{event.title}</Text>
           <Text style={styles.date}>{dateLabel}</Text>
           {creatorLabel ? <Text style={styles.meta}>Added by {creatorLabel}</Text> : null}

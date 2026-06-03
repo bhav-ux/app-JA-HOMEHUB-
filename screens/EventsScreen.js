@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth } from '../firebaseConfig';
 import { getUserFamilyId, subscribeToEvents } from '../services/eventService';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
@@ -21,6 +21,7 @@ const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
 export default function EventsScreen({ navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [familyId, setFamilyId] = useState(null);
@@ -122,7 +123,7 @@ export default function EventsScreen({ navigation }) {
       accessibilityLabel={`Open event ${item.title}`}
     >
       <View style={styles.eventInfo}>
-        <Text style={styles.eventTitle}>{item.title}</Text>
+        <Text style={styles.eventTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.eventDate}>{item.formattedDate}</Text>
       </View>
       <Text style={styles.chevron}>›</Text>
@@ -160,7 +161,7 @@ export default function EventsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.container}>
         <Text style={styles.title}>Events</Text>
         {loading ? (
@@ -173,7 +174,10 @@ export default function EventsScreen({ navigation }) {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={formattedEvents.length ? styles.listContent : styles.emptyListContent}
+            contentContainerStyle={[
+              formattedEvents.length ? styles.listContent : styles.emptyListContent,
+              { paddingBottom: spacing.xxl + 40 + insets.bottom },
+            ]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyState}>
@@ -183,7 +187,7 @@ export default function EventsScreen({ navigation }) {
             }
           />
         )}
-        <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+        <Animated.View style={[styles.fab, { bottom: spacing.lg + Math.max(insets.bottom, spacing.xs), transform: [{ scale: fabScale }] }]}>
           <TouchableOpacity
             style={styles.fabTouchable}
             onPress={handleAddEvent}
@@ -223,14 +227,13 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderColor: theme.border,
       ...shadow,
     },
-    eventInfo: { flex: 1 },
+    eventInfo: { flex: 1, minWidth: 0 },
     eventTitle: { ...typography.heading, marginBottom: spacing.xs, color: theme.text },
     eventDate: { fontSize: typography.body.fontSize, color: theme.secondaryText },
     chevron: { fontSize: 22, color: theme.secondaryText, marginLeft: spacing.md },
     fab: {
       position: 'absolute',
       right: spacing.lg,
-      bottom: spacing.lg,
       width: 56,
       height: 56,
       borderRadius: 28,

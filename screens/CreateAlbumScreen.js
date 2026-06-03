@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
@@ -10,6 +11,7 @@ import { createThemedStyles, spacing, typography, useAppTheme } from '../src/the
 export default function CreateAlbumScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [albumName, setAlbumName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -47,7 +49,7 @@ export default function CreateAlbumScreen({ navigation, route, familyId: familyI
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.centerContent}>
           <Text style={styles.infoText}>Please log in to create albums.</Text>
         </View>
@@ -56,9 +58,9 @@ export default function CreateAlbumScreen({ navigation, route, familyId: familyI
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.lg }]} keyboardShouldPersistTaps="handled">
           <Text style={styles.header}>Create Album</Text>
           <Input
             label="Album Name"
@@ -68,7 +70,7 @@ export default function CreateAlbumScreen({ navigation, route, familyId: familyI
             autoFocus
           />
         </ScrollView>
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
           <Button label={saving ? 'Saving...' : 'Save'} onPress={handleSave} loading={saving} disabled={!albumName.trim() || saving} />
         </View>
       </KeyboardAvoidingView>

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -94,6 +94,7 @@ function ChatRow({ onPress, avatar, name, subtitle, timestamp, accent, styles })
 export default function ChatsHomeScreen({ navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
 
   const [currentUser, setCurrentUser] = useState(null);
   const [familyId, setFamilyId] = useState(null);
@@ -256,7 +257,7 @@ export default function ChatsHomeScreen({ navigation }) {
 
       {/* ── Chat list (white card rising from header) ─────────── */}
       <View style={styles.chatListCard}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
 
           {/* Family Chat — always pinned at top */}
           <ChatRow

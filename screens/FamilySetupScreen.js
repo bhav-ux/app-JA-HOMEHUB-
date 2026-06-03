@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, Alert } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { arrayUnion, collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
@@ -9,6 +10,7 @@ import { createThemedStyles, spacing, typography } from '../src/theme';
 
 export default function FamilySetupScreen({ navigation }) {
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [familyCode, setFamilyCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -81,7 +83,7 @@ export default function FamilySetupScreen({ navigation }) {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.centerContent}>
           <Text style={styles.infoText}>Please log in to continue.</Text>
         </View>
@@ -90,22 +92,27 @@ export default function FamilySetupScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Join or Create a Family</Text>
-        <View style={styles.card}>
-          <Input
-            label="Family Code"
-            placeholder="Enter family code"
-            value={familyCode}
-            onChangeText={setFamilyCode}
-            autoCapitalize="none"
-          />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Button label="Join Family" onPress={handleJoinFamily} loading={loading} disabled={loading} />
-          <Button label="Create New Family" onPress={handleCreateFamily} disabled={loading} variant="secondary" />
-        </View>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <KeyboardAvoidingView style={styles.safeArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={[styles.container, { paddingBottom: spacing.lg + insets.bottom }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Join or Create a Family</Text>
+          <View style={styles.card}>
+            <Input
+              label="Family Code"
+              placeholder="Enter family code"
+              value={familyCode}
+              onChangeText={setFamilyCode}
+              autoCapitalize="none"
+            />
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Button label="Join Family" onPress={handleJoinFamily} loading={loading} disabled={loading} />
+            <Button label="Create New Family" onPress={handleCreateFamily} disabled={loading} variant="secondary" />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -117,7 +124,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       backgroundColor: theme.background,
     },
     container: {
-      flex: 1,
+      flexGrow: 1,
       padding: spacing.lg,
       justifyContent: 'center',
       backgroundColor: theme.background,

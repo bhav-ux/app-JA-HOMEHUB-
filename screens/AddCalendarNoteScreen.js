@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
@@ -25,6 +25,7 @@ import { createThemedStyles, spacing, typography, useAppTheme } from '../src/the
 export default function AddCalendarNoteScreen({ navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -119,7 +120,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.centerContent}>
           <Text style={styles.infoText}>Please log in to add notes.</Text>
         </View>
@@ -129,7 +130,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
 
   if (familyLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -139,7 +140,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
 
   if (!familyId) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.centerContent}>
           <Text style={styles.infoText}>No family found for your account.</Text>
         </View>
@@ -148,9 +149,9 @@ export default function AddCalendarNoteScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.lg }]} keyboardShouldPersistTaps="handled">
           <Text style={styles.header}>Add Calendar Note</Text>
           <Input label="Title" placeholder="Note title" value={title} onChangeText={setTitle} />
           <View style={styles.field}>
@@ -178,7 +179,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
             )}
           </View>
         </ScrollView>
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: spacing.lg + insets.bottom }]}>
           <Button label={saving ? 'Saving Note...' : 'Save Note'} onPress={handleSave} loading={saving} disabled={!title.trim() || !hasDate || saving} />
         </View>
       </KeyboardAvoidingView>

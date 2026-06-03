@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Platform,
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, doc, getDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { colors, radius, shadow, spacing, typography } from '../src/theme';
@@ -17,6 +17,7 @@ import { showAlert, showConfirm } from '../utils/dialogs';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
 
 export default function PhotosScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [familyId, setFamilyId] = useState(null);
@@ -212,7 +213,7 @@ export default function PhotosScreen({ navigation }) {
             data={albums}
             keyExtractor={(item) => item.id}
             renderItem={renderAlbumItem}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: spacing.xxl + insets.bottom + 56 }]}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>No albums yet. Tap + to create one.</Text>
@@ -221,7 +222,7 @@ export default function PhotosScreen({ navigation }) {
           />
         )}
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: spacing.xl + Math.max(insets.bottom, spacing.xs) }]}
           onPress={handleCreateAlbum}
           accessibilityRole="button"
           accessibilityLabel="Create album"
@@ -320,7 +321,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: spacing.xl,
     right: spacing.xl,
     width: 56,
     height: 56,

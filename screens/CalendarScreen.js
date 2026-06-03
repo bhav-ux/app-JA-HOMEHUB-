@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, SafeAreaView, ScrollView, View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { Animated, Platform, ScrollView, View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
@@ -16,6 +17,7 @@ const FAB_SPRING = { tension: 300, friction: 20, useNativeDriver: true };
 export default function CalendarScreen({ navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [events, setEvents] = useState([]);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -349,7 +351,7 @@ export default function CalendarScreen({ navigation }) {
         ) : (
           <ScrollView
             style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
@@ -454,7 +456,7 @@ export default function CalendarScreen({ navigation }) {
         ) : null}
 
         {fabMenuOpen ? (
-          <View style={[styles.fabSpeedItem, { bottom: spacing.lg + 64 }]}>
+          <View style={[styles.fabSpeedItem, { bottom: spacing.lg + Math.max(insets.bottom, spacing.xs) + 64 }]}>
             <Text style={styles.fabSpeedLabel}>Add Note</Text>
             <TouchableOpacity style={styles.fabMini} onPress={handleAddNote}>
               <Ionicons name="pencil-outline" size={20} color={theme.secondaryText} />
@@ -463,7 +465,7 @@ export default function CalendarScreen({ navigation }) {
         ) : null}
 
         {fabMenuOpen ? (
-          <View style={[styles.fabSpeedItem, { bottom: spacing.lg + 120 }]}>
+          <View style={[styles.fabSpeedItem, { bottom: spacing.lg + Math.max(insets.bottom, spacing.xs) + 120 }]}>
             <Text style={styles.fabSpeedLabel}>Add Event</Text>
             <TouchableOpacity style={styles.fabMini} onPress={handleAddEventFromCalendar}>
               <Ionicons name="calendar-outline" size={20} color={theme.primary} />
@@ -471,7 +473,7 @@ export default function CalendarScreen({ navigation }) {
           </View>
         ) : null}
 
-        <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+        <Animated.View style={[styles.fab, { bottom: spacing.lg + Math.max(insets.bottom, spacing.xs), transform: [{ scale: fabScale }] }]}>
           <TouchableOpacity
             style={styles.fabTouchable}
             onPress={handleFabPress}
@@ -518,6 +520,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     emptyText: { fontSize: typography.body.fontSize + 1, color: theme.secondaryText, textAlign: 'center', marginTop: spacing.lg },
     eventCard: {
       flexDirection: 'row',
+      alignItems: 'flex-start',
       backgroundColor: theme.card,
       borderRadius: radius.md,
       padding: spacing.lg,
@@ -528,19 +531,21 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     },
     eventTimeContainer: { marginRight: spacing.md, minWidth: 62 },
     eventTime: { fontSize: typography.body.fontSize, fontWeight: '700', color: theme.primary },
-    eventContent: { flex: 1 },
-    eventHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+    eventContent: { flex: 1, minWidth: 0 },
+    eventHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
     eventTitle: { ...typography.heading, color: theme.text, flex: 1 },
     deleteText: { color: theme.error, fontSize: 13, fontWeight: '700' },
     deleteButton: {
       minHeight: 32,
       minWidth: 44,
       paddingHorizontal: spacing.sm,
+      marginTop: 2,
       borderRadius: radius.sm,
       borderWidth: 1,
       borderColor: theme.error,
       alignItems: 'center',
       justifyContent: 'center',
+      flexShrink: 0,
       ...(Platform.OS === 'web' ? { zIndex: 2, elevation: 2, cursor: 'pointer' } : {}),
     },
     eventDescription: { ...typography.body, color: theme.secondaryText, marginTop: spacing.xs },
@@ -627,7 +632,6 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     },
     fab: {
       position: 'absolute',
-      bottom: spacing.lg,
       right: spacing.lg,
       width: 56,
       height: 56,

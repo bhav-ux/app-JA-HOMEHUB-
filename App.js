@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,7 @@ const Tab = createBottomTabNavigator();
 
 function MainTabs({ familyId, route }) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const familyIdValue = familyId ?? route?.params?.familyId;
 
   return (
@@ -44,6 +46,9 @@ function MainTabs({ familyId, route }) {
         tabBarStyle: {
           backgroundColor: theme.tabBarBackground,
           borderTopColor: theme.border,
+          height: 58 + insets.bottom,
+          paddingTop: 6,
+          paddingBottom: Math.max(insets.bottom, 6),
         },
         tabBarIcon: ({ color, size }) => {
           const map = {
@@ -226,8 +231,10 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppNavigator />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppNavigator />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

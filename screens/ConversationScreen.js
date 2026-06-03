@@ -6,13 +6,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -111,6 +111,7 @@ export default function ConversationScreen({ navigation, route }) {
 
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -428,7 +429,7 @@ export default function ConversationScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -439,7 +440,7 @@ export default function ConversationScreen({ navigation, route }) {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={renderMessage}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: spacing.lg + insets.bottom }]}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
           showsVerticalScrollIndicator={false}
@@ -449,13 +450,13 @@ export default function ConversationScreen({ navigation, route }) {
               <Text style={styles.emptyStateText}>{'No messages yet.\nSay hello! 👋'}</Text>
             </View>
           }
-          ListFooterComponent={<View style={{ height: spacing.md }} />}
+          ListFooterComponent={<View style={{ height: spacing.md + insets.bottom }} />}
         />
 
         {recordingHint ? <Text style={styles.recordingHint}>{recordingHint}</Text> : null}
 
         {/* ── Input bar ── */}
-        <View style={styles.inputBar}>
+        <View style={[styles.inputBar, { paddingBottom: spacing.sm + Math.max(insets.bottom, 0) }]}>
           <TouchableOpacity style={styles.inputIconBtn} onPress={() => setShowEmojiPicker((p) => !p)}>
             <Ionicons name="happy-outline" size={24} color="#9CA3AF" />
           </TouchableOpacity>
@@ -496,7 +497,7 @@ export default function ConversationScreen({ navigation, route }) {
       {/* ── Emoji picker ── */}
       <Modal visible={showEmojiPicker} transparent animationType="slide" onRequestClose={() => setShowEmojiPicker(false)}>
         <View style={styles.emojiOverlay}>
-          <View style={styles.emojiSheet}>
+          <View style={[styles.emojiSheet, { paddingBottom: spacing.xl + insets.bottom }]}>
             <View style={styles.emojiHeader}>
               <Text style={styles.emojiTitle}>Emoji</Text>
               <TouchableOpacity onPress={() => setShowEmojiPicker(false)}>
@@ -545,7 +546,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
 
     avatarSlot: { marginRight: 6, marginBottom: 18 },
 
-    messageRow: { maxWidth: '78%' },
+    messageRow: { maxWidth: '78%', minWidth: 0 },
     rowRight: { alignItems: 'flex-end' },
     rowLeft: { alignItems: 'flex-start' },
 
@@ -581,7 +582,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
 
     // ── Voice bubble ──
     voiceBubble: {
-      minWidth: 170,
+      minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: spacing.sm + 4,

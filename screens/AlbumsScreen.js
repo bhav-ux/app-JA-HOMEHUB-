@@ -6,12 +6,12 @@ import {
   Image,
   Platform,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
@@ -55,7 +55,7 @@ function AlbumCard({ item, onOpen, onDelete, styles, theme }) {
             )}
           </View>
           <View style={styles.albumInfo} pointerEvents="none">
-            <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
+            <Text style={styles.albumName} numberOfLines={1}>{item.name || 'Untitled Album'}</Text>
             <Text style={styles.albumMeta}>{previewUri ? 'Tap to open album' : 'No preview yet'}</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
@@ -85,7 +85,7 @@ function AlbumCard({ item, onOpen, onDelete, styles, theme }) {
         )}
       </View>
       <View style={styles.albumInfo} pointerEvents="none">
-        <Text style={styles.albumName}>{item.name || 'Untitled Album'}</Text>
+        <Text style={styles.albumName} numberOfLines={1}>{item.name || 'Untitled Album'}</Text>
         <Text style={styles.albumMeta}>{previewUri ? 'Tap to open album' : 'No preview yet'}</Text>
       </View>
       <TouchableOpacity style={styles.deleteButton} activeOpacity={0.7} onPress={onDelete}>
@@ -98,6 +98,7 @@ function AlbumCard({ item, onOpen, onDelete, styles, theme }) {
 export default function AlbumsScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const familyId = familyIdProp ?? route?.params?.familyId;
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -221,14 +222,17 @@ export default function AlbumsScreen({ navigation, route, familyId: familyIdProp
               keyExtractor={(item) => item.id}
               renderItem={renderAlbum}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={albums.length ? styles.listContent : styles.emptyContent}
+              contentContainerStyle={[
+                albums.length ? styles.listContent : styles.emptyContent,
+                { paddingBottom: spacing.xxl + 40 + insets.bottom },
+              ]}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
               ListEmptyComponent={<Text style={styles.emptyText}>{"No albums yet.\nCreate your first family album."}</Text>}
             />
           </Animated.View>
         )}
 
-        <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+        <Animated.View style={[styles.fab, { bottom: spacing.lg + Math.max(insets.bottom, spacing.xs), transform: [{ scale: fabScale }] }]}>
           <TouchableOpacity
             style={styles.fabTouchable}
             onPress={handleCreateAlbum}
@@ -288,7 +292,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       justifyContent: 'center',
       backgroundColor: theme.inputBackground,
     },
-    albumInfo: { flex: 1 },
+    albumInfo: { flex: 1, minWidth: 0 },
     albumName: { ...typography.heading, fontSize: typography.heading.fontSize - 1, color: theme.text },
     albumMeta: { marginTop: 3, fontSize: typography.small.fontSize, color: theme.secondaryText },
     chevron: {
@@ -313,7 +317,6 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     fab: {
       position: 'absolute',
       right: spacing.lg,
-      bottom: spacing.lg,
       width: 56,
       height: 56,
       borderRadius: 28,

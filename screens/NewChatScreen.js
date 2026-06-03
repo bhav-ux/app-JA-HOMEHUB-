@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
@@ -74,6 +74,7 @@ export default function NewChatScreen({ navigation, route }) {
   const familyId = route?.params?.familyId;
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
 
   const [currentUser, setCurrentUser] = useState(null);
   const [mode, setMode] = useState('dm'); // 'dm' | 'group'
@@ -210,7 +211,7 @@ export default function NewChatScreen({ navigation, route }) {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -240,7 +241,7 @@ export default function NewChatScreen({ navigation, route }) {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xl + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
         >
           {/* ---- DM Mode ---- */}
@@ -364,7 +365,7 @@ export default function NewChatScreen({ navigation, route }) {
             </View>
           )}
 
-          <View style={{ height: spacing.xxl }} />
+          <View style={{ height: spacing.xl + insets.bottom }} />
         </ScrollView>
       </View>
     </SafeAreaView>

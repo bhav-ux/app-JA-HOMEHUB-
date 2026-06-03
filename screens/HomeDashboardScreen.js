@@ -6,9 +6,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
@@ -107,6 +108,8 @@ function getAvatarColor(name, index) {
 export default function HomeDashboardScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const familyId = familyIdProp ?? route?.params?.familyId;
   const user = auth.currentUser;
 
@@ -249,6 +252,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
 
   const visibleMembers = members.slice(0, MAX_VISIBLE_AVATARS);
   const overflowCount = Math.max(0, members.length - MAX_VISIBLE_AVATARS);
+  const actionCardWidth = Math.min(120, Math.max(68, (Math.min(screenWidth, 600) - spacing.lg * 2 - 24) / 4));
 
   let focusState = 'loading';
   if (!eventsLoading) {
@@ -261,7 +265,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
     <SafeAreaView style={styles.safeArea}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]} pointerEvents="auto">
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -348,7 +352,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
           {quickActions.map(({ label, icon, onPress }) => (
             <AnimatedCard
               key={label}
-              style={styles.actionBtn}
+              style={[styles.actionBtn, { width: actionCardWidth, maxWidth: actionCardWidth }]}
               onPress={onPress}
               accessibilityLabel={label}
               scaleDown={0.95}
@@ -422,8 +426,6 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
             </View>
           </View>
         )}
-
-        <View style={styles.bottomPad} />
       </ScrollView>
       </Animated.View>
     </SafeAreaView>
@@ -564,11 +566,10 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       alignItems: 'stretch',
       justifyContent: 'space-between',
       gap: 8,
-      marginHorizontal: -4,
       marginBottom: 18,
+      flexWrap: 'wrap',
     },
     actionBtn: {
-      flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.card,
@@ -576,6 +577,7 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       borderRadius: 17,
       paddingVertical: 14,
       paddingHorizontal: 6,
+      minWidth: 0,
       ...shadow,
     },
     actionIconWrap: {
@@ -673,10 +675,6 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       fontSize: 11,
       color: theme.secondaryText,
       flexShrink: 0,
-    },
-
-    bottomPad: {
-      height: 40,
     },
   })
 );

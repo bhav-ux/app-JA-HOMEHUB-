@@ -5,12 +5,12 @@ import {
   FlatList,
   Image,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 //import ImageViewing from 'react-native-image-viewing';
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
@@ -26,6 +26,7 @@ import { createThemedStyles, spacing, typography, useAppTheme } from '../src/the
 export default function AlbumScreen({ route }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const { albumName, albumId, familyId } = route?.params || {};
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -205,7 +206,7 @@ export default function AlbumScreen({ route }) {
   const viewerPhotos = photos.filter((photo) => photo.url);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>{albumName || 'Album'}</Text>
       </View>
@@ -225,12 +226,12 @@ export default function AlbumScreen({ route }) {
           renderItem={renderItem}
           numColumns={3}
           columnWrapperStyle={styles.columnWrapper}
-          contentContainerStyle={listContentStyle}
+          contentContainerStyle={[listContentStyle, { paddingBottom: 96 + insets.bottom }]}
           ListEmptyComponent={<Text style={styles.emptyText}>{"No photos yet.\nTap + to add one."}</Text>}
         />
       )}
 
-      <TouchableOpacity style={[styles.fab, uploading && styles.fabDisabled]} onPress={handleUpload} disabled={uploading}>
+      <TouchableOpacity style={[styles.fab, { bottom: spacing.lg + Math.max(insets.bottom, spacing.xs) }, uploading && styles.fabDisabled]} onPress={handleUpload} disabled={uploading}>
         {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fabText}>+</Text>}
       </TouchableOpacity>
 
@@ -286,7 +287,6 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     fab: {
       position: 'absolute',
       right: spacing.lg,
-      bottom: spacing.xl,
       width: 56,
       height: 56,
       borderRadius: 28,

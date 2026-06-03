@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  SafeAreaView,
   ScrollView,
   View,
   Text,
@@ -12,6 +11,7 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { Share } from 'react-native';
@@ -36,6 +36,7 @@ import { createThemedStyles, spacing, typography, useAppTheme } from '../src/the
 export default function ProfileScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme, isDark, toggleTheme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -212,10 +213,10 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     familyId && familyId.length > 16 ? `${familyId.slice(0, 16)}…` : familyId;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <Animated.View style={[styles.flex, { opacity: contentFade }]} pointerEvents="auto">
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[styles.container, { paddingBottom: spacing.xxl + spacing.xl + insets.bottom }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >

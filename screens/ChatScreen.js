@@ -6,13 +6,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -53,6 +53,7 @@ const isEmojiOnlyMessage = (value) => {
 export default function ChatScreen({ navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -436,7 +437,7 @@ export default function ChatScreen({ navigation }) {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={renderMessage}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: spacing.xl + insets.bottom }]}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           onLayout={() => listRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
@@ -451,7 +452,7 @@ export default function ChatScreen({ navigation }) {
 
         {recordingHint ? <Text style={styles.recordingHint}>{recordingHint}</Text> : null}
 
-        <View style={styles.inputRow}>
+        <View style={[styles.inputRow, { marginBottom: Math.max(insets.bottom, spacing.sm) }]}>
           <TouchableOpacity style={styles.iconButton} onPress={() => setShowEmojiPicker((prev) => !prev)}>
             <Ionicons name="happy-outline" size={22} color={theme.primary} />
           </TouchableOpacity>
@@ -481,7 +482,7 @@ export default function ChatScreen({ navigation }) {
 
       <Modal visible={showEmojiPicker} transparent animationType="slide" onRequestClose={() => setShowEmojiPicker(false)}>
         <View style={styles.emojiOverlay}>
-          <View style={styles.emojiSheet}>
+          <View style={[styles.emojiSheet, { paddingBottom: spacing.xl + insets.bottom }]}>
             <View style={styles.emojiHeader}>
               <Text style={styles.emojiTitle}>Choose Emoji</Text>
               <TouchableOpacity onPress={() => setShowEmojiPicker(false)}>
@@ -515,7 +516,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     rowRight: { alignSelf: 'flex-end', alignItems: 'flex-end', marginRight: spacing.md },
     rowLeft: { alignSelf: 'flex-start', alignItems: 'flex-start', marginLeft: spacing.md },
     voiceBubble: {
-      minWidth: 180,
+      minWidth: 0,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
       flexDirection: 'row',

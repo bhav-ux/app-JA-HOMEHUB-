@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  SafeAreaView,
+  KeyboardAvoidingView,
+  ScrollView,
   View,
   Text,
   TouchableOpacity,
@@ -10,6 +11,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import RNDateTimePicker from '@react-native-community/datetimepicker';
 import { auth } from '../firebaseConfig';
 import Button from '../src/components/Button';
@@ -26,6 +28,7 @@ function todayAtMidnight() {
 export default function AddEventScreen({ navigation }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [emoji, setEmoji] = useState('');
   const [description, setDescription] = useState('');
@@ -176,7 +179,7 @@ export default function AddEventScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.centerPage}>
+      <SafeAreaView style={styles.centerPage} edges={['left', 'right', 'bottom']}>
         <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
@@ -184,7 +187,7 @@ export default function AddEventScreen({ navigation }) {
 
   if (!familyId) {
     return (
-      <SafeAreaView style={styles.centerPage}>
+      <SafeAreaView style={styles.centerPage} edges={['left', 'right', 'bottom']}>
         <Text style={styles.warning}>No family assigned</Text>
         <Text style={styles.secondaryText}>Please complete family setup</Text>
       </SafeAreaView>
@@ -192,10 +195,18 @@ export default function AddEventScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Add Event</Text>
-        <View style={styles.card}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.safeArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.container, { paddingBottom: spacing.lg + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Add Event</Text>
+          <View style={styles.card}>
           <Input placeholder="Event Title" value={title} onChangeText={setTitle} />
           <Input
             placeholder="Emoji (optional, e.g. 🎂)"
@@ -297,8 +308,9 @@ export default function AddEventScreen({ navigation }) {
             loading={saving}
             disabled={saving}
           />
-        </View>
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -306,7 +318,7 @@ export default function AddEventScreen({ navigation }) {
 const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.background },
-    container: { flex: 1, padding: spacing.lg },
+    container: { flexGrow: 1, padding: spacing.lg },
     title: {
       ...typography.title,
       textAlign: 'center',
