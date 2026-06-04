@@ -65,6 +65,22 @@ const formatDuration = (s) => {
   return `${Math.floor(n / 60)}:${(n % 60).toString().padStart(2, '0')}`;
 };
 
+const getMessageTime = (message) => {
+  const value = message?.createdAt;
+  const date = value?.toDate ? value.toDate() : value instanceof Date ? value : new Date(value || 0);
+  const time = date.getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const restoreDeletedMessage = (messages, message) => {
+  if (!message || messages.some((item) => item.id === message.id)) return messages;
+  return [...messages, message].sort((left, right) => {
+    const timeDiff = getMessageTime(left) - getMessageTime(right);
+    if (timeDiff !== 0) return timeDiff;
+    return String(left.id || '').localeCompare(String(right.id || ''));
+  });
+};
+
 const isEmojiOnly = (val) => {
   const t = val.trim();
   if (!t) return false;
@@ -144,6 +160,7 @@ export default function ConversationScreen({ navigation, route }) {
           style: 'destructive',
           onPress: () =>
             showConfirm('Leave Group', 'Are you sure you want to leave this group?', {
+              confirmText: 'Leave',
               onConfirm: async () => {
                 try {
                   await leaveGroup(familyId, chatId, currentUser?.uid);
@@ -316,11 +333,13 @@ export default function ConversationScreen({ navigation, route }) {
     if (!message || message.senderId !== currentUser?.uid || !familyId) return;
     showConfirm('Delete message', 'Remove this message?', {
       onConfirm: async () => {
-        const prev = messages;
         try {
           setMessages((m) => m.filter((x) => x.id !== message.id));
           await deleteConversationMessage(chat, message.id);
-        } catch { setMessages(prev); showAlert('Error', 'Could not delete the message.'); }
+        } catch {
+          setMessages((current) => restoreDeletedMessage(current, message));
+          showAlert('Error', 'Could not delete the message.');
+        }
       },
     });
   };

@@ -28,6 +28,7 @@ import NewChatScreen from './screens/NewChatScreen';
 import { auth, db } from './firebaseConfig';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { getNavigationTheme } from './src/theme';
+import { showAlert } from './utils/dialogs';
 import { registerForPushNotificationsAsync } from './utils/notifications';
 
 const Stack = createNativeStackNavigator();
@@ -140,11 +141,11 @@ function AppNavigator() {
         console.log('EXPO PUSH TOKEN:', token);
 
         if (!token) {
-          alert('No push token received');
+          showAlert('Push registration', 'No push token received');
           return;
         }
 
-        alert(`Push token received:\n\n${token}`);
+        showAlert('Push registration', `Push token received:\n\n${token}`);
 
         await setDoc(
           doc(db, 'users', user.uid),
@@ -154,7 +155,7 @@ function AppNavigator() {
       } catch (error) {
         console.error('Failed to register push token', error);
 
-        alert(`Push registration failed:\n\n${error.message}`);
+        showAlert('Push registration failed', error.message);
       }
     };
 
