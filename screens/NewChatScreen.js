@@ -445,7 +445,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       backgroundColor: theme.card,
     },
     memberRowSelected: {
-      backgroundColor: '#EFF6FF',
+      backgroundColor: theme.primaryLight,
     },
     memberInfo: {
       flex: 1,

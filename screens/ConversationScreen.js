@@ -458,13 +458,13 @@ export default function ConversationScreen({ navigation, route }) {
         {/* ── Input bar ── */}
         <View style={[styles.inputBar, { paddingBottom: spacing.sm + Math.max(insets.bottom, 0) }]}>
           <TouchableOpacity style={styles.inputIconBtn} onPress={() => setShowEmojiPicker((p) => !p)}>
-            <Ionicons name="happy-outline" size={24} color="#9CA3AF" />
+            <Ionicons name="happy-outline" size={24} color={theme.secondaryText} />
           </TouchableOpacity>
 
           <TextInput
             style={styles.inputField}
             placeholder="Type your message..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.secondaryText}
             value={input}
             onChangeText={setInput}
             multiline
@@ -477,7 +477,7 @@ export default function ConversationScreen({ navigation, route }) {
           >
             {uploadingVoice
               ? <ActivityIndicator size="small" color={theme.primary} />
-              : <Ionicons name={isRecording ? 'mic' : 'mic-outline'} size={22} color={isRecording ? '#fff' : '#9CA3AF'} />
+              : <Ionicons name={isRecording ? 'mic' : 'mic-outline'} size={22} color={isRecording ? '#fff' : theme.secondaryText} />
             }
           </Pressable>
 
@@ -501,7 +501,7 @@ export default function ConversationScreen({ navigation, route }) {
             <View style={styles.emojiHeader}>
               <Text style={styles.emojiTitle}>Emoji</Text>
               <TouchableOpacity onPress={() => setShowEmojiPicker(false)}>
-                <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+                <Ionicons name="close-circle" size={24} color={theme.secondaryText} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -525,7 +525,7 @@ export default function ConversationScreen({ navigation, route }) {
 
 const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
   StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#EEF2FF' },
+    safeArea: { flex: 1, backgroundColor: theme.background },
     flex: { flex: 1 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
@@ -553,7 +553,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     senderName: {
       fontSize: 11,
       fontWeight: '600',
-      color: '#9CA3AF',
+      color: theme.secondaryText,
       marginBottom: 3,
       marginLeft: 2,
     },
@@ -563,7 +563,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderBottomRightRadius: 4,
     },
     receivedBubbleOverride: {
-      backgroundColor: '#fff',
+      backgroundColor: theme.messageBubbleReceiver,
       borderBottomLeftRadius: 4,
       shadowColor: 'rgba(0,0,0,0.06)',
       shadowOffset: { width: 0, height: 2 },
@@ -574,9 +574,9 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
 
     messageText: { fontSize: 15, lineHeight: 21 },
     textSent: { color: '#fff' },
-    textReceived: { color: '#111827' },
+    textReceived: { color: theme.text },
 
-    timeLabel: { marginTop: 4, fontSize: 10, color: '#9CA3AF' },
+    timeLabel: { marginTop: 4, fontSize: 10, color: theme.secondaryText },
     timeRight: { alignSelf: 'flex-end' },
     timeLeft: { alignSelf: 'flex-start' },
 
@@ -626,9 +626,9 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.sm,
       paddingBottom: Platform.OS === 'ios' ? spacing.sm : spacing.sm,
-      backgroundColor: '#fff',
+      backgroundColor: theme.card,
       borderTopWidth: 1,
-      borderTopColor: '#F3F4F6',
+      borderTopColor: theme.border,
     },
     inputIconBtn: {
       width: 40,
@@ -648,10 +648,10 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       paddingHorizontal: spacing.md,
       paddingTop: 10,
       paddingBottom: 10,
-      backgroundColor: '#F3F4F6',
+      backgroundColor: theme.inputBackground,
       borderRadius: 22,
       fontSize: 15,
-      color: '#111827',
+      color: theme.text,
       lineHeight: 20,
     },
     sendBtn: {
@@ -680,16 +680,16 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       paddingHorizontal: spacing.xl,
     },
     emptyStateText: {
-      color: '#9CA3AF',
+      color: theme.secondaryText,
       fontSize: 15,
       textAlign: 'center',
       lineHeight: 23,
     },
 
     // ── Emoji picker ──
-    emojiOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.3)' },
+    emojiOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: theme.overlay },
     emojiSheet: {
-      backgroundColor: '#fff',
+      backgroundColor: theme.card,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingHorizontal: spacing.lg,
@@ -703,7 +703,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       justifyContent: 'space-between',
       marginBottom: spacing.sm,
     },
-    emojiTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+    emojiTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
     emojiItem: { width: '12.5%', alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
     emojiItemText: { fontSize: 24 },
   })

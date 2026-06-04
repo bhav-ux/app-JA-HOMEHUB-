@@ -68,7 +68,7 @@ function Avatar({ name, size = 52, color, emoji, uid }) {
   );
 }
 
-function ChatRow({ onPress, avatar, name, subtitle, timestamp, accent, styles }) {
+function ChatRow({ onPress, avatar, name, subtitle, timestamp, accent, styles, theme }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.72} style={[styles.chatRow, accent && styles.chatRowAccent]}>
       {accent ? <View style={styles.accentBar} /> : null}
@@ -83,7 +83,7 @@ function ChatRow({ onPress, avatar, name, subtitle, timestamp, accent, styles })
           </View>
           <Text style={styles.chatRowPreview} numberOfLines={1}>{subtitle}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={15} color="#D1D5DB" />
+        <Ionicons name="chevron-forward" size={15} color={theme.secondaryText} />
       </View>
     </TouchableOpacity>
   );
@@ -267,6 +267,7 @@ export default function ChatsHomeScreen({ navigation }) {
             subtitle={familyPreviewText}
             timestamp={familyChatPreview?.createdAt}
             styles={styles}
+            theme={theme}
             avatar={<Avatar emoji="🏠" size={56} color={theme.primary} />}
           />
 
@@ -282,6 +283,7 @@ export default function ChatsHomeScreen({ navigation }) {
                 subtitle={dm.lastMessage || 'Start the conversation'}
                 timestamp={dm.lastMessageAt}
                 styles={styles}
+            theme={theme}
                 avatar={<Avatar name={otherName} uid={otherUid} size={56} />}
               />
             );
@@ -299,6 +301,7 @@ export default function ChatsHomeScreen({ navigation }) {
               subtitle={group.lastMessage || `${(group.members || []).length} members`}
               timestamp={group.lastMessageAt}
               styles={styles}
+            theme={theme}
               avatar={
                 <Avatar
                   name={group.name}
@@ -416,7 +419,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     // ── Chat list card ──
     chatListCard: {
       flex: 1,
-      backgroundColor: '#F9FAFB',
+      backgroundColor: theme.background,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       overflow: 'hidden',
@@ -424,13 +427,13 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
 
     // ── Chat row ──
     chatRow: {
-      backgroundColor: '#fff',
+      backgroundColor: theme.card,
       borderBottomWidth: 1,
-      borderBottomColor: '#F3F4F6',
+      borderBottomColor: theme.border,
       overflow: 'hidden',
     },
     chatRowAccent: {
-      backgroundColor: '#EFF6FF',
+      backgroundColor: theme.primaryLight,
     },
     accentBar: {
       position: 'absolute',
@@ -459,7 +462,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     chatRowName: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#111827',
+      color: theme.text,
       flex: 1,
       marginRight: spacing.sm,
     },
@@ -468,12 +471,12 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     },
     chatRowTime: {
       fontSize: 11,
-      color: '#9CA3AF',
+      color: theme.secondaryText,
       fontWeight: '500',
     },
     chatRowPreview: {
       fontSize: 13,
-      color: '#6B7280',
+      color: theme.secondaryText,
       lineHeight: 18,
     },
 
@@ -482,11 +485,11 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       fontWeight: '700',
       letterSpacing: 1.2,
       textTransform: 'uppercase',
-      color: '#9CA3AF',
+      color: theme.secondaryText,
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.lg,
       paddingBottom: spacing.sm,
-      backgroundColor: '#F9FAFB',
+      backgroundColor: theme.background,
     },
 
     emptyState: {
@@ -498,13 +501,13 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     emptyTitle: {
       fontSize: 20,
       fontWeight: '700',
-      color: '#111827',
+      color: theme.text,
       marginBottom: spacing.sm,
       textAlign: 'center',
     },
     emptyBody: {
       fontSize: 14,
-      color: '#6B7280',
+      color: theme.secondaryText,
       textAlign: 'center',
       lineHeight: 21,
       marginBottom: spacing.xl,
