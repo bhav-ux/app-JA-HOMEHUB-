@@ -1,11 +1,17 @@
-import { arrayRemove, collection, deleteDoc, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { arrayRemove, collection, deleteDoc, doc, getDoc, getDocs, updateDoc, writeBatch } from 'firebase/firestore';
 import { deleteObject, ref } from 'firebase/storage';
 import { db, storage } from '../firebaseConfig';
 
 export const leaveFamily = async ({ uid, familyId }) => {
   if (!uid || !familyId) throw new Error('Missing user or family information');
-  await updateDoc(doc(db, 'families', familyId), { members: arrayRemove(uid) });
-  await updateDoc(doc(db, 'users', uid), { familyId: null });
+  // Remove from members and adminIds atomically so no stale admin entry remains.
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'families', familyId), {
+    members:  arrayRemove(uid),
+    adminIds: arrayRemove(uid),
+  });
+  batch.update(doc(db, 'users', uid), { familyId: null });
+  await batch.commit();
 };
 
 const buildOwnerError = () => {

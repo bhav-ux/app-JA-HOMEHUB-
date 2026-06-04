@@ -22,6 +22,7 @@ import CreateAlbumScreen from './screens/CreateAlbumScreen';
 import AlbumScreen from './screens/AlbumScreen';
 import EventDetailsScreen from './screens/EventDetailsScreen';
 import FamilySetupScreen from './screens/FamilySetupScreen';
+import FamilyManagementScreen from './screens/FamilyManagementScreen';
 import HomeDashboardScreen from './screens/HomeDashboardScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import NewChatScreen from './screens/NewChatScreen';
@@ -198,6 +199,7 @@ function AppNavigator() {
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign up' }} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
         <Stack.Screen name="FamilySetup" component={FamilySetupScreen} options={{ title: 'Family Setup' }} />
+        <Stack.Screen name="FamilyManagement" component={FamilyManagementScreen} options={{ title: 'Manage Family' }} />
         <Stack.Screen
           name="MainTabs"
           options={{

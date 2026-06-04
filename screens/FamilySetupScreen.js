@@ -12,6 +12,7 @@ export default function FamilySetupScreen({ navigation }) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [familyCode, setFamilyCode] = useState('');
+  const [familyName, setFamilyName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,15 +26,15 @@ export default function FamilySetupScreen({ navigation }) {
       const familyRef = doc(collection(db, 'families'));
       const familyId = familyRef.id;
       await setDoc(familyRef, {
+        name:      familyName.trim() || 'My Family',
+        ownerId:   user.uid,
+        adminIds:  [],
+        members:   [user.uid],
         createdAt: new Date(),
-        members: [user.uid],
       });
       await setDoc(
         doc(db, 'users', user.uid),
-        {
-          familyId,
-          email: user.email || '',
-        },
+        { familyId, email: user.email || '' },
         { merge: true }
       );
       navigation.replace('MainTabs', { familyId });
@@ -102,10 +103,16 @@ export default function FamilySetupScreen({ navigation }) {
           <View style={styles.card}>
             <Input
               label="Family Code"
-              placeholder="Enter family code"
+              placeholder="Enter family code to join"
               value={familyCode}
               onChangeText={setFamilyCode}
               autoCapitalize="none"
+            />
+            <Input
+              label="Family Name (for new families)"
+              placeholder="e.g. The Johnsons"
+              value={familyName}
+              onChangeText={setFamilyName}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <Button label="Join Family" onPress={handleJoinFamily} loading={loading} disabled={loading} />

@@ -28,6 +28,7 @@ import { sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import { leaveFamily } from '../utils/delete';
+import { ROLES, getRole } from '../utils/familyRoles';
 import { showAlert, showConfirm } from '../utils/dialogs';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
@@ -45,6 +46,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
   const [savingName, setSavingName] = useState(false);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(true);
+  const [familyDoc, setFamilyDoc] = useState(null);
 
   const user = auth.currentUser;
   const familyId = familyIdProp ?? profile?.familyId ?? route?.params?.familyId;
@@ -117,6 +119,17 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
       }
     );
     return unsubscribe;
+  }, [familyId]);
+
+  // Subscribe to family document for realtime role data.
+  useEffect(() => {
+    if (!familyId) { setFamilyDoc(null); return; }
+    const unsub = onSnapshot(
+      doc(db, 'families', familyId),
+      (snap) => setFamilyDoc(snap.exists() ? { id: snap.id, ...snap.data() } : null),
+      () => setFamilyDoc(null)
+    );
+    return unsub;
   }, [familyId]);
 
   useEffect(() => {
@@ -198,8 +211,20 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     );
   }, [user?.email]);
 
+  const myRole = getRole(familyDoc, user?.uid);
+
   const handleLeaveFamily = useCallback(() => {
     if (!user?.uid || !familyId) return;
+
+    if (myRole === ROLES.OWNER) {
+      showAlert(
+        'Transfer ownership first',
+        'You are the family owner. Transfer ownership to another member before leaving.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     showConfirm(
       'Leave Family',
       "You'll lose access to this family's events, chats, and albums.",
@@ -220,7 +245,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
         },
       }
     );
-  }, [user?.uid, familyId, navigation]);
+  }, [user?.uid, familyId, myRole, navigation]);
 
   const displayNameValue = profile?.displayName?.trim() || '';
   const avatarLetter =
@@ -310,9 +335,21 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
                 );
               })
             )}
-            {familyId ? (
+            {familyId && (myRole === ROLES.OWNER || myRole === ROLES.ADMIN) ? (
               <TouchableOpacity
                 style={styles.leaveRow}
+                onPress={() => navigation.navigate('FamilyManagement', { familyId })}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Manage Family"
+              >
+                <Ionicons name="settings-outline" size={17} color={theme.primary} />
+                <Text style={[styles.leaveLabel, { color: theme.primary }]}>Manage Family</Text>
+              </TouchableOpacity>
+            ) : null}
+            {familyId ? (
+              <TouchableOpacity
+                style={[styles.leaveRow, (myRole === ROLES.OWNER || myRole === ROLES.ADMIN) && styles.leaveRowBordered]}
                 onPress={handleLeaveFamily}
                 activeOpacity={0.7}
                 accessibilityRole="button"
@@ -603,6 +640,10 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       ...(Platform.OS === 'web'
         ? { position: 'relative', zIndex: 2, elevation: 2, cursor: 'pointer' }
         : {}),
+    },
+    leaveRowBordered: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.border,
     },
     leaveLabel: {
       fontSize: typography.body.fontSize + 1,
