@@ -10,6 +10,7 @@ import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import EventsScreen from './screens/EventsScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import AlbumsScreen from './screens/AlbumsScreen';
@@ -194,6 +195,7 @@ function AppNavigator() {
       >
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign up' }} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
         <Stack.Screen name="FamilySetup" component={FamilySetupScreen} options={{ title: 'Family Setup' }} />
         <Stack.Screen
           name="MainTabs"

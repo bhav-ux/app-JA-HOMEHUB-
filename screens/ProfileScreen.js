@@ -24,7 +24,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
+import { sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import { leaveFamily } from '../utils/delete';
@@ -177,6 +177,26 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
       setSavingName(false);
     }
   };
+
+  const handleResetPassword = useCallback(async () => {
+    const email = user?.email;
+    if (!email) return;
+    showConfirm(
+      'Reset Password',
+      `We'll send a reset link to ${email}.`,
+      {
+        confirmText: 'Send',
+        onConfirm: async () => {
+          try {
+            await sendPasswordResetEmail(auth, email);
+            showAlert('Email sent', `A password reset link has been sent to ${email}.`);
+          } catch (err) {
+            showAlert('Error', getFirebaseErrorMessage(err, 'Unable to send reset email right now.'));
+          }
+        },
+      }
+    );
+  }, [user?.email]);
 
   const handleLeaveFamily = useCallback(() => {
     if (!user?.uid || !familyId) return;
@@ -363,6 +383,22 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
             )}
           </View>
 
+          <View style={[styles.card, styles.resetCard]}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={handleResetPassword}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Reset Password"
+            >
+              <View style={styles.settingRowContent}>
+                <Text style={styles.settingLabel}>Reset Password</Text>
+                <Text style={styles.settingSubValue}>Send a reset link to {user.email}</Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* ── LOGOUT ──────────────────────────────────────── */}
           <View style={styles.logoutSection}>
             <Button label="Log Out" onPress={handleLogout} variant="secondary" />
@@ -543,6 +579,8 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       marginTop: spacing.xs,
     },
     flexButton: { flex: 1 },
+
+    resetCard: { marginTop: spacing.md },
 
     // Logout
     logoutSection: { marginTop: spacing.xl },
