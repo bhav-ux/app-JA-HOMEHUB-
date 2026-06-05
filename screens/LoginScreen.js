@@ -10,66 +10,58 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';
-import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { spacing } from '../src/theme';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
+import { sendHomeHubEmailLink } from '../utils/emailLinkAuth';
 
 const DARK = '#111111';
 const SHAPE = '#1E1E1E';
 
 const SHAPES = [
-  { top: -10, left: 8,   w: 38, h: 38, r: '18deg'  },
-  { top: 18,  left: 68,  w: 20, h: 20, r: '45deg'  },
-  { top: 50,  left: 140, w: 30, h: 14, r: '-22deg' },
-  { top: 8,   left: 210, w: 18, h: 38, r: '30deg'  },
-  { top: 65,  left: 255, w: 28, h: 28, r: '-40deg' },
-  { top: 6,   left: 310, w: 22, h: 22, r: '55deg'  },
-  { top: 85,  left: 28,  w: 16, h: 32, r: '35deg'  },
-  { top: 90,  left: 185, w: 26, h: 12, r: '-15deg' },
-  { top: 112, left: 95,  w: 20, h: 20, r: '10deg'  },
-  { top: 118, left: 320, w: 32, h: 14, r: '60deg'  },
-  { top: 135, left: 55,  w: 42, h: 14, r: '-28deg' },
-  { top: 148, left: 268, w: 18, h: 18, r: '42deg'  },
+  { top: -10, left: 8, w: 38, h: 38, r: '18deg' },
+  { top: 18, left: 68, w: 20, h: 20, r: '45deg' },
+  { top: 50, left: 140, w: 30, h: 14, r: '-22deg' },
+  { top: 8, left: 210, w: 18, h: 38, r: '30deg' },
+  { top: 65, left: 255, w: 28, h: 28, r: '-40deg' },
+  { top: 6, left: 310, w: 22, h: 22, r: '55deg' },
+  { top: 85, left: 28, w: 16, h: 32, r: '35deg' },
+  { top: 90, left: 185, w: 26, h: 12, r: '-15deg' },
+  { top: 112, left: 95, w: 20, h: 20, r: '10deg' },
+  { top: 118, left: 320, w: 32, h: 14, r: '60deg' },
+  { top: 135, left: 55, w: 42, h: 14, r: '-28deg' },
+  { top: 148, left: 268, w: 18, h: 18, r: '42deg' },
   { top: 160, left: 155, w: 24, h: 10, r: '-10deg' },
-  { top: 155, left: 0,   w: 14, h: 26, r: '20deg'  },
+  { top: 155, left: 0, w: 14, h: 26, r: '20deg' },
 ];
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = useCallback(async () => {
-    if (!email || !password) {
-      setError('Please enter both email and password.');
+  const handleContinue = useCallback(async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Please enter your email address.');
       return;
     }
+
     try {
       setLoading(true);
       setError('');
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-      const uid = auth.currentUser?.uid;
-      let target = 'MainTabs';
-      let params;
-      if (uid) {
-        const snap = await getDoc(doc(db, 'users', uid));
-        const familyId = snap.exists() ? snap.data()?.familyId : null;
-        if (!familyId) target = 'FamilySetup';
-        else params = { familyId };
-      }
-      const rootNavigator = navigation.getParent();
-      (rootNavigator || navigation).replace(target, params);
-    } catch (e) {
-      setError(getFirebaseErrorMessage(e, 'Unable to log in right now.'));
+      const pendingRequest = await sendHomeHubEmailLink({
+        email: trimmedEmail,
+        mode: 'login',
+      });
+      navigation.navigate('EmailLinkSent', pendingRequest);
+    } catch (nextError) {
+      setError(getFirebaseErrorMessage(nextError, 'Unable to send your sign-in link right now.'));
     } finally {
       setLoading(false);
     }
-  }, [email, password, navigation]);
+  }, [email, navigation]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -78,12 +70,18 @@ export default function LoginScreen({ navigation }) {
         style={styles.kav}
       >
         <View style={styles.header}>
-          {SHAPES.map((s, i) => (
+          {SHAPES.map((shape, index) => (
             <View
-              key={i}
+              key={index}
               style={[
                 styles.shape,
-                { top: s.top, left: s.left, width: s.w, height: s.h, transform: [{ rotate: s.r }] },
+                {
+                  top: shape.top,
+                  left: shape.left,
+                  width: shape.w,
+                  height: shape.h,
+                  transform: [{ rotate: shape.r }],
+                },
               ]}
             />
           ))}
@@ -103,8 +101,21 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Log in</Text>
-          <Text style={styles.subtitle}>Welcome back — sign in to continue.</Text>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>
+            Sign in with a secure email link and pick up right where your family left off.
+          </Text>
+
+          <View style={styles.badgeRow}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeTitle}>Passwordless</Text>
+              <Text style={styles.badgeBody}>No password to remember</Text>
+            </View>
+            <View style={styles.badge}>
+              <Text style={styles.badgeTitle}>Secure</Text>
+              <Text style={styles.badgeBody}>Verified from your inbox</Text>
+            </View>
+          </View>
 
           <View style={styles.fields}>
             <Input
@@ -112,44 +123,37 @@ export default function LoginScreen({ navigation }) {
               placeholder="name@example.com"
               autoCapitalize="none"
               autoComplete="email"
-              textContentType="emailAddress"
               keyboardType="email-address"
-              returnKeyType="next"
+              returnKeyType="done"
+              textContentType="emailAddress"
               value={email}
               onChangeText={setEmail}
-            />
-            <Input
-              label="Password"
-              placeholder="Enter your password"
-              secureTextEntry
-              autoComplete="password"
-              textContentType="password"
-              returnKeyType="done"
-              value={password}
-              onChangeText={setPassword}
-              onSubmitEditing={handleLogin}
+              onSubmitEditing={handleContinue}
             />
           </View>
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <Button
+            label={loading ? 'Sending link…' : 'Continue with Email'}
+            onPress={handleContinue}
+            loading={loading}
+            disabled={loading}
+            style={styles.btnOverride}
+            textStyle={styles.btnText}
+            accessibilityHint="Send a passwordless sign-in link to your email"
+          />
 
           <TouchableOpacity
             style={styles.forgotRow}
             onPress={() => navigation.navigate('ForgotPassword')}
             activeOpacity={0.7}
           >
-            <Text style={styles.forgotText}>Forgot password?</Text>
+            <Text style={styles.forgotText}>
+              Need a password reset for an older account?
+              <Text style={styles.forgotHighlight}> Forgot password</Text>
+            </Text>
           </TouchableOpacity>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Button
-            label={loading ? 'Logging in…' : 'Continue'}
-            onPress={handleLogin}
-            loading={loading}
-            disabled={loading}
-            style={styles.btnOverride}
-            textStyle={styles.btnText}
-            accessibilityHint="Log in and continue"
-          />
 
           <TouchableOpacity
             style={styles.linkRow}
@@ -157,8 +161,7 @@ export default function LoginScreen({ navigation }) {
             activeOpacity={0.7}
           >
             <Text style={styles.linkText}>
-              Don't have an account?{'  '}
-              <Text style={styles.linkHighlight}>Sign up</Text>
+              New to HomeHub? <Text style={styles.linkHighlight}>Create your account</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -231,22 +234,37 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 6,
-    marginBottom: 28,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  badge: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  badgeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  badgeBody: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 18,
   },
   fields: {
     gap: spacing.md,
     marginBottom: spacing.md,
-  },
-  forgotRow: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.md,
-  },
-  forgotText: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontWeight: '600',
   },
   error: {
     color: '#DC2626',
@@ -269,16 +287,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
+  forgotRow: {
+    marginTop: spacing.md,
+    alignItems: 'center',
+  },
+  forgotText: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  forgotHighlight: {
+    color: '#2563EB',
+    fontWeight: '700',
+  },
   linkRow: {
-    marginTop: 22,
+    marginTop: spacing.lg,
     alignItems: 'center',
   },
   linkText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
+    textAlign: 'center',
   },
   linkHighlight: {
-    color: '#2563EB',
+    color: '#111111',
     fontWeight: '700',
   },
 });

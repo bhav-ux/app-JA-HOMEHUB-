@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Linking, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { createNavigationContainerRef, NavigationContainer, StackActions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,8 @@ import OnboardingScreen, { ONBOARDING_KEY } from './screens/OnboardingScreen';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import EmailLinkSentScreen from './screens/EmailLinkSentScreen';
+import EmailLinkAuthScreen from './screens/EmailLinkAuthScreen';
 import EventsScreen from './screens/EventsScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import AlbumsScreen from './screens/AlbumsScreen';
@@ -32,10 +34,12 @@ import { auth, db } from './firebaseConfig';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { getNavigationTheme } from './src/theme';
 import { showAlert } from './utils/dialogs';
+import { isEmailLinkSignInUrl } from './utils/emailLinkAuth';
 import { registerForPushNotificationsAsync } from './utils/notifications';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const navigationRef = createNavigationContainerRef();
 
 function MainTabs({ familyId, route }) {
   const { theme } = useTheme();
@@ -96,6 +100,8 @@ function AppNavigator() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [familyId, setFamilyId] = useState(null);
   const [user, setUser] = useState(null);
+  const [navigationReady, setNavigationReady] = useState(false);
+  const [pendingEmailLink, setPendingEmailLink] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -128,6 +134,52 @@ function AppNavigator() {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const queueEmailLink = (url) => {
+      if (url && isEmailLinkSignInUrl(url)) {
+        setPendingEmailLink(url);
+      }
+    };
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (isMounted) {
+          queueEmailLink(url);
+        }
+      })
+      .catch((error) => {
+        console.error('[App] Failed to read initial URL', error);
+      });
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      queueEmailLink(url);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.remove?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!navigationReady || !pendingEmailLink || !navigationRef.isReady()) {
+      return;
+    }
+
+    const currentRoute = navigationRef.getCurrentRoute();
+    const params = { emailLink: pendingEmailLink, receivedAt: Date.now() };
+
+    if (currentRoute?.name === 'EmailLinkAuth') {
+      navigationRef.dispatch(StackActions.replace('EmailLinkAuth', params));
+    } else {
+      navigationRef.navigate('EmailLinkAuth', params);
+    }
+
+    setPendingEmailLink('');
+  }, [navigationReady, pendingEmailLink]);
 
   useEffect(() => {
     if (!user) return;
@@ -188,7 +240,11 @@ function AppNavigator() {
   }
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navigationTheme}
+      onReady={() => setNavigationReady(true)}
+    >
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack.Navigator
         initialRouteName={initialRoute}
@@ -210,6 +266,16 @@ function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign up' }} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
+        <Stack.Screen
+          name="EmailLinkSent"
+          component={EmailLinkSentScreen}
+          options={{ title: 'Check your email' }}
+        />
+        <Stack.Screen
+          name="EmailLinkAuth"
+          component={EmailLinkAuthScreen}
+          options={{ title: 'Email sign-in' }}
+        />
         <Stack.Screen name="FamilySetup" component={FamilySetupScreen} options={{ title: 'Family Setup' }} />
         <Stack.Screen name="FamilyManagement" component={FamilyManagementScreen} options={{ title: 'Manage Family' }} />
         <Stack.Screen

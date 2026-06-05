@@ -10,65 +10,62 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';
-import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { spacing } from '../src/theme';
+import { getFirebaseErrorMessage } from '../utils/firebaseError';
+import { sendHomeHubEmailLink } from '../utils/emailLinkAuth';
 
 const DARK = '#111111';
 const SHAPE = '#1E1E1E';
 
 const SHAPES = [
-  { top: -8,  left: 20,  w: 32, h: 32, r: '22deg'  },
-  { top: 22,  left: 85,  w: 18, h: 18, r: '-45deg' },
-  { top: 5,   left: 155, w: 26, h: 44, r: '15deg'  },
-  { top: 48,  left: 230, w: 34, h: 14, r: '-30deg' },
-  { top: 12,  left: 295, w: 20, h: 20, r: '50deg'  },
-  { top: 72,  left: 50,  w: 14, h: 28, r: '38deg'  },
-  { top: 80,  left: 180, w: 24, h: 24, r: '-18deg' },
-  { top: 95,  left: 320, w: 30, h: 12, r: '65deg'  },
-  { top: 115, left: 110, w: 20, h: 20, r: '8deg'   },
+  { top: -8, left: 20, w: 32, h: 32, r: '22deg' },
+  { top: 22, left: 85, w: 18, h: 18, r: '-45deg' },
+  { top: 5, left: 155, w: 26, h: 44, r: '15deg' },
+  { top: 48, left: 230, w: 34, h: 14, r: '-30deg' },
+  { top: 12, left: 295, w: 20, h: 20, r: '50deg' },
+  { top: 72, left: 50, w: 14, h: 28, r: '38deg' },
+  { top: 80, left: 180, w: 24, h: 24, r: '-18deg' },
+  { top: 95, left: 320, w: 30, h: 12, r: '65deg' },
+  { top: 115, left: 110, w: 20, h: 20, r: '8deg' },
   { top: 128, left: 260, w: 16, h: 32, r: '-42deg' },
-  { top: 145, left: 10,  w: 44, h: 12, r: '-25deg' },
-  { top: 158, left: 200, w: 22, h: 22, r: '33deg'  },
-  { top: 168, left: 75,  w: 28, h: 10, r: '-12deg' },
-  { top: 162, left: 340, w: 16, h: 16, r: '48deg'  },
+  { top: 145, left: 10, w: 44, h: 12, r: '-25deg' },
+  { top: 158, left: 200, w: 22, h: 22, r: '33deg' },
+  { top: 168, left: 75, w: 28, h: 10, r: '-12deg' },
+  { top: 162, left: 340, w: 16, h: 16, r: '48deg' },
 ];
 
 export default function SignupScreen({ navigation }) {
-  const [name, setName]         = useState('');
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSignup = useCallback(async () => {
-    if (!name.trim() || !email || !password) {
-      setError('Please fill in all fields.');
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName || !trimmedEmail) {
+      setError('Please enter your name and email.');
       return;
     }
+
     try {
       setLoading(true);
       setError('');
-      const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const uid = credential.user?.uid;
-      await setDoc(doc(db, 'users', uid), {
-        email: email.trim(),
-        displayName: name.trim(),
-        familyId: null,
-        createdAt: new Date(),
+      const pendingRequest = await sendHomeHubEmailLink({
+        email: trimmedEmail,
+        displayName: trimmedName,
+        mode: 'signup',
       });
-      const rootNavigator = navigation.getParent();
-      (rootNavigator || navigation).replace('FamilySetup');
-    } catch (e) {
-      setError(getFirebaseErrorMessage(e, 'Unable to create your account right now.'));
+      navigation.navigate('EmailLinkSent', pendingRequest);
+    } catch (nextError) {
+      setError(getFirebaseErrorMessage(nextError, 'Unable to send your sign-up link right now.'));
     } finally {
       setLoading(false);
     }
-  }, [email, password, name, navigation]);
+  }, [email, name, navigation]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
@@ -77,16 +74,22 @@ export default function SignupScreen({ navigation }) {
         style={styles.kav}
       >
         <View style={styles.header}>
-          {SHAPES.map((s, i) => (
+          {SHAPES.map((shape, index) => (
             <View
-              key={i}
+              key={index}
               style={[
                 styles.shape,
-                { top: s.top, left: s.left, width: s.w, height: s.h, transform: [{ rotate: s.r }] },
+                {
+                  top: shape.top,
+                  left: shape.left,
+                  width: shape.w,
+                  height: shape.h,
+                  transform: [{ rotate: shape.r }],
+                },
               ]}
             />
           ))}
-          <Text style={styles.headerLabel}>Sign Up</Text>
+          <Text style={styles.headerLabel}>Create Account</Text>
           <View style={styles.logoBox}>
             <Image
               source={require('../assets/icon.png')}
@@ -102,39 +105,38 @@ export default function SignupScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Join your family hub — takes 30 seconds.</Text>
+          <Text style={styles.title}>Join your family hub</Text>
+          <Text style={styles.subtitle}>
+            We'll email you a secure sign-in link and finish setting up your HomeHub account.
+          </Text>
+
+          <View style={styles.featureCard}>
+            <Text style={styles.featureTitle}>What happens next</Text>
+            <Text style={styles.featureBody}>1. Enter your details</Text>
+            <Text style={styles.featureBody}>2. Open the secure email link</Text>
+            <Text style={styles.featureBody}>3. Start your family setup</Text>
+          </View>
 
           <View style={styles.fields}>
             <Input
               label="Full Name"
               placeholder="Your full name"
-              value={name}
-              onChangeText={setName}
-              textContentType="name"
               autoComplete="name"
               returnKeyType="next"
+              textContentType="name"
+              value={name}
+              onChangeText={setName}
             />
             <Input
               label="Email"
               placeholder="name@example.com"
               autoCapitalize="none"
               autoComplete="email"
-              textContentType="emailAddress"
               keyboardType="email-address"
-              returnKeyType="next"
+              returnKeyType="done"
+              textContentType="emailAddress"
               value={email}
               onChangeText={setEmail}
-            />
-            <Input
-              label="Password"
-              placeholder="Create a password"
-              secureTextEntry
-              autoComplete="password"
-              textContentType="newPassword"
-              returnKeyType="done"
-              value={password}
-              onChangeText={setPassword}
               onSubmitEditing={handleSignup}
             />
           </View>
@@ -142,13 +144,13 @@ export default function SignupScreen({ navigation }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Button
-            label={loading ? 'Creating account…' : 'Register'}
+            label={loading ? 'Sending link…' : 'Continue with Email'}
             onPress={handleSignup}
             loading={loading}
             disabled={loading}
             style={styles.btnOverride}
             textStyle={styles.btnText}
-            accessibilityHint="Create your account"
+            accessibilityHint="Send a passwordless sign-up link to your email"
           />
 
           <TouchableOpacity
@@ -157,8 +159,7 @@ export default function SignupScreen({ navigation }) {
             activeOpacity={0.7}
           >
             <Text style={styles.linkText}>
-              Already have an account?{'  '}
-              <Text style={styles.linkHighlight}>Sign in</Text>
+              Already have an account? <Text style={styles.linkHighlight}>Sign in</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -230,9 +231,30 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 6,
-    marginBottom: 28,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  featureCard: {
+    borderRadius: 20,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  featureTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  featureBody: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 20,
   },
   fields: {
     gap: spacing.md,
@@ -260,15 +282,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   linkRow: {
-    marginTop: 22,
+    marginTop: spacing.lg,
     alignItems: 'center',
   },
   linkText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
+    textAlign: 'center',
   },
   linkHighlight: {
-    color: '#2563EB',
+    color: '#111111',
     fontWeight: '700',
   },
 });
