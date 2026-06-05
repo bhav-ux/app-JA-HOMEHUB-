@@ -5,9 +5,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
+import OnboardingScreen, { ONBOARDING_KEY } from './screens/OnboardingScreen';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
@@ -100,7 +102,12 @@ function AppNavigator() {
       setUser(nextUser);
       if (!nextUser) {
         setFamilyId(null);
-        setInitialRoute('Login');
+        try {
+          const done = await AsyncStorage.getItem(ONBOARDING_KEY);
+          setInitialRoute(done === 'true' ? 'Login' : 'Onboarding');
+        } catch {
+          setInitialRoute('Login');
+        }
         setCheckingAuth(false);
         return;
       }
@@ -195,6 +202,11 @@ function AppNavigator() {
           contentStyle: { backgroundColor: theme.background },
         }}
       >
+        <Stack.Screen
+          name="Onboarding"
+          component={OnboardingScreen}
+          options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }}
+        />
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Signup" component={SignupScreen} options={{ title: 'Sign up' }} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
