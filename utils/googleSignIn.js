@@ -15,10 +15,12 @@ WebBrowser.maybeCompleteAuthSession();
 const GOOGLE_OAUTH_PATH = 'oauth/google';
 
 export function getGoogleWebClientId() {
-  const clientId = Constants.expoConfig?.extra?.googleWebClientId;
+  const clientId =
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+    Constants.expoConfig?.extra?.googleWebClientId;
   if (!clientId) {
     const error = new Error(
-      'Google Web Client ID is missing. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID or extra.googleWebClientId in app config.'
+      'Google Web Client ID is missing. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in your .env file.'
     );
     error.code = 'auth/google-client-id-missing';
     throw error;

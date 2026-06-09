@@ -53,6 +53,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       await sendPasswordResetEmail(auth, email.trim());
       setSent(true);
     } catch (e) {
+      console.error('[ForgotPassword] sendPasswordResetEmail failed:', e?.code, e?.message);
       setError(getFirebaseErrorMessage(e, 'Unable to send reset email right now.'));
     } finally {
       setLoading(false);
