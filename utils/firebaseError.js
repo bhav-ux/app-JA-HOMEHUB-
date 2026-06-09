@@ -14,6 +14,14 @@ const FIREBASE_MESSAGES = {
   'auth/too-many-requests': 'Too many attempts. Please try again shortly.',
   'auth/network-request-failed': 'Network issue. Check your connection and try again.',
   'auth/requires-recent-login': 'Please log in again to continue.',
+  'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
+  'auth/cancelled-popup-request': 'Google sign-in was cancelled.',
+  'auth/account-exists-with-different-credential':
+    'An account already exists with the same email using a different sign-in method.',
+  'auth/google-client-id-missing':
+    'Google sign-in is not configured yet. Add your Firebase Web Client ID to the app config.',
+  'auth/google-not-ready': 'Google sign-in is still loading. Please try again.',
+  'auth/google-sign-in-failed': 'Google sign-in failed. Please try again.',
   'auth/unauthorized-continue-uri': 'This sign-in link is not configured correctly.',
   'auth/invalid-continue-uri': 'This sign-in link is not configured correctly.',
   'permission-denied': 'You do not have permission to do this.',

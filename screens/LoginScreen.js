@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
+import { useGoogleSignIn } from '../hooks/useGoogleSignIn';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { spacing } from '../src/theme';
@@ -43,6 +44,13 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const {
+    signInWithGoogle,
+    googleLoading,
+    googleError,
+    setGoogleError,
+    isGoogleConfigured,
+  } = useGoogleSignIn();
 
   const handleSignIn = useCallback(async () => {
     const trimmedEmail = email.trim();
@@ -62,9 +70,14 @@ export default function LoginScreen({ navigation }) {
     }
   }, [email, password]);
 
-  const handleGoogleSignIn = useCallback(() => {
-    Alert.alert('Coming Soon', 'Google sign-in will be available soon.');
-  }, []);
+  const handleGoogleSignIn = useCallback(async () => {
+    setError('');
+    setGoogleError('');
+    await signInWithGoogle();
+  }, [setGoogleError, signInWithGoogle]);
+
+  const authBusy = loading || googleLoading;
+  const displayError = error || googleError;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -106,8 +119,17 @@ export default function LoginScreen({ navigation }) {
         >
           <Text style={styles.title}>Login</Text>
 
-          <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleSignIn} activeOpacity={0.8}>
-            <Text style={styles.googleText}>Continue with Google</Text>
+          <TouchableOpacity
+            style={[styles.googleBtn, authBusy && styles.googleBtnDisabled]}
+            onPress={handleGoogleSignIn}
+            activeOpacity={0.8}
+            disabled={authBusy || !isGoogleConfigured}
+          >
+            {googleLoading ? (
+              <ActivityIndicator color="#111827" />
+            ) : (
+              <Text style={styles.googleText}>Continue with Google</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
@@ -141,13 +163,13 @@ export default function LoginScreen({ navigation }) {
             />
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {displayError ? <Text style={styles.error}>{displayError}</Text> : null}
 
           <Button
             label={loading ? 'Signing in…' : 'Sign In'}
             onPress={handleSignIn}
             loading={loading}
-            disabled={loading}
+            disabled={authBusy}
             style={styles.btnOverride}
             textStyle={styles.btnText}
           />
@@ -244,8 +266,13 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
     backgroundColor: '#FFFFFF',
     marginBottom: 20,
+  },
+  googleBtnDisabled: {
+    opacity: 0.65,
   },
   googleText: {
     fontSize: 15,

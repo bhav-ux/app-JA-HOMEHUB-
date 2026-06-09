@@ -56,9 +56,13 @@
     "owner": "bhavjain2011",
     "extra": {
       "emailLinkUrlBase": "https://myapp-ceb0c.firebaseapp.com",
+      "googleWebClientId": "",
       "eas": {
         "projectId": "5220c3c5-f997-4ee5-b91d-edeb4c14ee7f"
       }
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

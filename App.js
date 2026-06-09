@@ -108,27 +108,38 @@ function AppNavigator() {
       setUser(nextUser);
       if (!nextUser) {
         setFamilyId(null);
+        let destination = 'Login';
         try {
           const done = await AsyncStorage.getItem(ONBOARDING_KEY);
-          setInitialRoute(done === 'true' ? 'Login' : 'Onboarding');
+          destination = done === 'true' ? 'Login' : 'Onboarding';
         } catch {
-          setInitialRoute('Login');
+          destination = 'Login';
         }
+        setInitialRoute(destination);
         setCheckingAuth(false);
+        if (navigationRef.isReady()) {
+          navigationRef.reset({ index: 0, routes: [{ name: destination }] });
+        }
         return;
       }
 
+      let destination = 'FamilySetup';
+      let familyValue = null;
       try {
         const snap = await getDoc(doc(db, 'users', nextUser.uid));
-        const familyValue = snap.exists() ? snap.data()?.familyId : null;
+        familyValue = snap.exists() ? snap.data()?.familyId : null;
         setFamilyId(familyValue || null);
-        setInitialRoute(familyValue ? 'MainTabs' : 'FamilySetup');
+        destination = familyValue ? 'MainTabs' : 'FamilySetup';
+        setInitialRoute(destination);
       } catch (error) {
         console.error('[App] Failed to determine initial route', error);
         setFamilyId(null);
         setInitialRoute('FamilySetup');
       } finally {
         setCheckingAuth(false);
+      }
+      if (navigationRef.isReady()) {
+        navigationRef.reset({ index: 0, routes: [{ name: destination }] });
       }
     });
 

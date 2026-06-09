@@ -176,7 +176,7 @@ export async function ensureHomeHubUserDocument({
     ...(photoURL ? { photoURL } : {}),
   };
 
-  await setDoc(doc(db, 'users', uid), payload, { merge: false });
+  await setDoc(doc(db, 'users', uid), payload, { merge: true });
 
   if (auth.currentUser && trimmedDisplayName && auth.currentUser.displayName !== trimmedDisplayName) {
     await updateProfile(auth.currentUser, { displayName: trimmedDisplayName });
