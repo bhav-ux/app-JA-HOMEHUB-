@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -10,11 +10,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../firebaseConfig';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { spacing } from '../src/theme';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
-import { sendHomeHubEmailLink } from '../utils/emailLinkAuth';
 
 const DARK = '#111111';
 const SHAPE = '#1E1E1E';
@@ -39,33 +40,51 @@ const SHAPES = [
 export default function SignupScreen({ navigation }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSignup = useCallback(async () => {
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmRef = useRef(null);
+
+  const handleCreateAccount = useCallback(async () => {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
-    if (!trimmedName || !trimmedEmail) {
-      setError('Please enter your name and email.');
+    if (!trimmedName) {
+      setError('Please enter your name.');
+      return;
+    }
+    if (!trimmedEmail) {
+      setError('Please enter your email.');
+      return;
+    }
+    if (!password) {
+      setError('Please enter a password.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
       return;
     }
 
     try {
       setLoading(true);
       setError('');
-      const pendingRequest = await sendHomeHubEmailLink({
-        email: trimmedEmail,
-        displayName: trimmedName,
-        mode: 'signup',
-      });
-      navigation.navigate('EmailLinkSent', pendingRequest);
+      const { user } = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+      await updateProfile(user, { displayName: trimmedName });
     } catch (nextError) {
-      setError(getFirebaseErrorMessage(nextError, 'Unable to send your sign-up link right now.'));
+      setError(getFirebaseErrorMessage(nextError, 'Unable to create your account. Please try again.'));
     } finally {
       setLoading(false);
     }
-  }, [email, name, navigation]);
+  }, [name, email, password, confirmPassword]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
@@ -89,7 +108,7 @@ export default function SignupScreen({ navigation }) {
               ]}
             />
           ))}
-          <Text style={styles.headerLabel}>Create Account</Text>
+          <Text style={styles.headerLabel}>Signup</Text>
           <View style={styles.logoBox}>
             <Image
               source={require('../assets/icon.png')}
@@ -105,52 +124,67 @@ export default function SignupScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Join your family hub</Text>
-          <Text style={styles.subtitle}>
-            We'll email you a secure sign-in link and finish setting up your HomeHub account.
-          </Text>
-
-          <View style={styles.featureCard}>
-            <Text style={styles.featureTitle}>What happens next</Text>
-            <Text style={styles.featureBody}>1. Enter your details</Text>
-            <Text style={styles.featureBody}>2. Open the secure email link</Text>
-            <Text style={styles.featureBody}>3. Start your family setup</Text>
-          </View>
+          <Text style={styles.title}>Create Account</Text>
 
           <View style={styles.fields}>
             <Input
-              label="Full Name"
+              label="Name"
               placeholder="Your full name"
               autoComplete="name"
               returnKeyType="next"
               textContentType="name"
               value={name}
               onChangeText={setName}
+              onSubmitEditing={() => emailRef.current?.focus()}
             />
             <Input
+              ref={emailRef}
               label="Email"
               placeholder="name@example.com"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
-              returnKeyType="done"
+              returnKeyType="next"
               textContentType="emailAddress"
               value={email}
               onChangeText={setEmail}
-              onSubmitEditing={handleSignup}
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
+            <Input
+              ref={passwordRef}
+              label="Password"
+              placeholder="At least 6 characters"
+              secureTextEntry
+              autoComplete="new-password"
+              returnKeyType="next"
+              textContentType="newPassword"
+              value={password}
+              onChangeText={setPassword}
+              onSubmitEditing={() => confirmRef.current?.focus()}
+            />
+            <Input
+              ref={confirmRef}
+              label="Confirm Password"
+              placeholder="Re-enter your password"
+              secureTextEntry
+              autoComplete="new-password"
+              returnKeyType="done"
+              textContentType="newPassword"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              onSubmitEditing={handleCreateAccount}
             />
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Button
-            label={loading ? 'Sending link…' : 'Continue with Email'}
-            onPress={handleSignup}
+            label={loading ? 'Creating account…' : 'Create Account'}
+            onPress={handleCreateAccount}
             loading={loading}
             disabled={loading}
             style={styles.btnOverride}
             textStyle={styles.btnText}
-            accessibilityHint="Send a passwordless sign-up link to your email"
           />
 
           <TouchableOpacity
@@ -228,33 +262,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F0F0F',
     letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 6,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  featureCard: {
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  featureTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  featureBody: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 20,
+    marginBottom: 24,
   },
   fields: {
     gap: spacing.md,

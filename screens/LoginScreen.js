@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -10,11 +11,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebaseConfig';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { spacing } from '../src/theme';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
-import { sendHomeHubEmailLink } from '../utils/emailLinkAuth';
 
 const DARK = '#111111';
 const SHAPE = '#1E1E1E';
@@ -38,30 +40,31 @@ const SHAPES = [
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleContinue = useCallback(async () => {
+  const handleSignIn = useCallback(async () => {
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setError('Please enter your email address.');
+    if (!trimmedEmail || !password) {
+      setError('Please enter your email and password.');
       return;
     }
 
     try {
       setLoading(true);
       setError('');
-      const pendingRequest = await sendHomeHubEmailLink({
-        email: trimmedEmail,
-        mode: 'login',
-      });
-      navigation.navigate('EmailLinkSent', pendingRequest);
+      await signInWithEmailAndPassword(auth, trimmedEmail, password);
     } catch (nextError) {
-      setError(getFirebaseErrorMessage(nextError, 'Unable to send your sign-in link right now.'));
+      setError(getFirebaseErrorMessage(nextError, 'Unable to sign in. Please try again.'));
     } finally {
       setLoading(false);
     }
-  }, [email, navigation]);
+  }, [email, password]);
+
+  const handleGoogleSignIn = useCallback(() => {
+    Alert.alert('Coming Soon', 'Google sign-in will be available soon.');
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -101,20 +104,16 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>
-            Sign in with a secure email link and pick up right where your family left off.
-          </Text>
+          <Text style={styles.title}>Login</Text>
 
-          <View style={styles.badgeRow}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeTitle}>Passwordless</Text>
-              <Text style={styles.badgeBody}>No password to remember</Text>
-            </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeTitle}>Secure</Text>
-              <Text style={styles.badgeBody}>Verified from your inbox</Text>
-            </View>
+          <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleSignIn} activeOpacity={0.8}>
+            <Text style={styles.googleText}>Continue with Google</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>or</Text>
+            <View style={styles.dividerLine} />
           </View>
 
           <View style={styles.fields}>
@@ -124,24 +123,33 @@ export default function LoginScreen({ navigation }) {
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
-              returnKeyType="done"
+              returnKeyType="next"
               textContentType="emailAddress"
               value={email}
               onChangeText={setEmail}
-              onSubmitEditing={handleContinue}
+            />
+            <Input
+              label="Password"
+              placeholder="Your password"
+              secureTextEntry
+              autoComplete="password"
+              returnKeyType="done"
+              textContentType="password"
+              value={password}
+              onChangeText={setPassword}
+              onSubmitEditing={handleSignIn}
             />
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Button
-            label={loading ? 'Sending link…' : 'Continue with Email'}
-            onPress={handleContinue}
+            label={loading ? 'Signing in…' : 'Sign In'}
+            onPress={handleSignIn}
             loading={loading}
             disabled={loading}
             style={styles.btnOverride}
             textStyle={styles.btnText}
-            accessibilityHint="Send a passwordless sign-in link to your email"
           />
 
           <TouchableOpacity
@@ -149,10 +157,7 @@ export default function LoginScreen({ navigation }) {
             onPress={() => navigation.navigate('ForgotPassword')}
             activeOpacity={0.7}
           >
-            <Text style={styles.forgotText}>
-              Need a password reset for an older account?
-              <Text style={styles.forgotHighlight}> Forgot password</Text>
-            </Text>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -161,7 +166,7 @@ export default function LoginScreen({ navigation }) {
             activeOpacity={0.7}
           >
             <Text style={styles.linkText}>
-              New to HomeHub? <Text style={styles.linkHighlight}>Create your account</Text>
+              New to HomeHub? <Text style={styles.linkHighlight}>Signup</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -231,36 +236,36 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F0F0F',
     letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 6,
     marginBottom: 24,
-    lineHeight: 20,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
+  googleBtn: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 20,
   },
-  badge: {
-    flex: 1,
-    borderRadius: 18,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  badgeTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+  googleText: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
   },
-  badgeBody: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 18,
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerLabel: {
+    fontSize: 13,
+    color: '#9CA3AF',
   },
   fields: {
     gap: spacing.md,
@@ -293,13 +298,8 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  forgotHighlight: {
     color: '#2563EB',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   linkRow: {
     marginTop: spacing.lg,
