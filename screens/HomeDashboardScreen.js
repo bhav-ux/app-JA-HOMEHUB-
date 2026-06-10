@@ -15,21 +15,10 @@ import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { subscribeToEvents } from '../services/eventService';
 import { subscribeToMessages } from '../services/chatService';
+import { subscribeFamilyMembers, subscribeRelationships } from '../services/familyTreeService';
 import { createThemedStyles, spacing, useAppTheme } from '../src/theme';
 import AnimatedCard from '../src/components/AnimatedCard';
-
-const AVATAR_PALETTE = [
-  '#7B93C8',
-  '#D4896A',
-  '#76A895',
-  '#9E7DC4',
-  '#6BA4C4',
-  '#C4956A',
-  '#89B488',
-  '#B07AB0',
-];
-
-const MAX_VISIBLE_AVATARS = 5;
+import MiniFamilyTree from '../src/components/familyTree/MiniFamilyTree';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -93,18 +82,6 @@ function getTodayLabel() {
   return `${weekday}, ${day} ${month}`;
 }
 
-function getInitials(name) {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function getAvatarColor(name, index) {
-  if (!name) return AVATAR_PALETTE[index % AVATAR_PALETTE.length];
-  return AVATAR_PALETTE[name.charCodeAt(0) % AVATAR_PALETTE.length];
-}
-
 export default function HomeDashboardScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
@@ -120,6 +97,8 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
   const [events, setEvents] = useState([]);
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
+  const [familyTreeMembers, setFamilyTreeMembers] = useState([]);
+  const [familyTreeRelationships, setFamilyTreeRelationships] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
 
   useEffect(() => {
@@ -156,6 +135,16 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
       if (mounted) setMembers(resolved);
     });
     return () => { mounted = false; unsub(); };
+  }, [familyId]);
+
+  useEffect(() => {
+    if (!familyId) { setFamilyTreeMembers([]); return; }
+    return subscribeFamilyMembers(familyId, setFamilyTreeMembers, () => setFamilyTreeMembers([]));
+  }, [familyId]);
+
+  useEffect(() => {
+    if (!familyId) { setFamilyTreeRelationships([]); return; }
+    return subscribeRelationships(familyId, setFamilyTreeRelationships, () => setFamilyTreeRelationships([]));
   }, [familyId]);
 
   useEffect(() => {
@@ -250,8 +239,6 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
     { label: 'Note', icon: 'create-outline', onPress: () => navigation.navigate('AddCalendarNote') },
   ];
 
-  const visibleMembers = members.slice(0, MAX_VISIBLE_AVATARS);
-  const overflowCount = Math.max(0, members.length - MAX_VISIBLE_AVATARS);
   const actionCardWidth = Math.min(120, Math.max(68, (Math.min(screenWidth, 600) - spacing.lg * 2 - 24) / 4));
 
   let focusState = 'loading';
@@ -365,36 +352,35 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
           ))}
         </View>
 
-        {/* Family Snapshot */}
-        {members.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionChip}>YOUR FAMILY</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.familyScrollContent}
-            >
-              {visibleMembers.map((member, i) => (
-                <View key={member.uid} style={styles.avatarWrap}>
-                  <View style={[styles.avatar, { backgroundColor: getAvatarColor(member.name, i) }]}>
-                    <Text style={styles.avatarInitials}>{getInitials(member.name)}</Text>
-                  </View>
-                  <Text style={styles.avatarName} numberOfLines={1}>
-                    {member.name.split(' ')[0]}
-                  </Text>
-                </View>
-              ))}
-              {overflowCount > 0 && (
-                <View style={styles.avatarWrap}>
-                  <View style={styles.avatarOverflow}>
-                    <Text style={styles.avatarOverflowText}>+{overflowCount}</Text>
-                  </View>
-                  <Text style={styles.avatarName}> </Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        )}
+        {/* Family Tree */}
+        <View style={styles.section}>
+          <Text style={styles.sectionChip}>FAMILY</Text>
+          <AnimatedCard
+            style={styles.treeCard}
+            onPress={() => navigation.navigate('FamilyTree', { familyId })}
+            accessibilityLabel="Open Family Tree"
+            scaleDown={0.98}
+          >
+            <View style={styles.treeCardHeader}>
+              <View style={styles.treeCardTitleWrap}>
+                <Text style={styles.treeCardTitle}>🌳 Family Tree</Text>
+                <Text style={styles.treeCardSubtitle}>See how everyone is connected</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={`${theme.primary}66`} />
+            </View>
+
+            <MiniFamilyTree
+              members={familyTreeMembers}
+              relationships={familyTreeRelationships}
+              currentUserId={user?.uid}
+            />
+
+            <View style={[styles.treeCardBtn, { backgroundColor: theme.primaryLight }]}>
+              <Text style={[styles.treeCardBtnText, { color: theme.primary }]}>View Full Tree</Text>
+              <Ionicons name="arrow-forward" size={14} color={theme.primary} />
+            </View>
+          </AnimatedCard>
+        </View>
 
         {/* Recent Activity */}
         {recentActivity.length > 0 && (
@@ -598,49 +584,44 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       textAlign: 'center',
     },
 
-    // Family Snapshot
-    familyScrollContent: {
-      paddingRight: spacing.sm,
-      gap: 16,
+    // Family Tree
+    treeCard: {
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      padding: spacing.md,
+      ...shadow,
     },
-    avatarWrap: {
+    treeCardHeader: {
+      flexDirection: 'row',
       alignItems: 'center',
+      marginBottom: spacing.sm,
     },
-    avatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 6,
+    treeCardTitleWrap: {
+      flex: 1,
     },
-    avatarInitials: {
-      fontSize: 15,
+    treeCardTitle: {
+      fontSize: 16,
       fontWeight: '700',
-      color: '#FFFFFF',
-      letterSpacing: 0.3,
+      color: theme.text,
+      letterSpacing: -0.2,
     },
-    avatarName: {
-      fontSize: 11,
+    treeCardSubtitle: {
+      marginTop: 2,
+      fontSize: 12,
       color: theme.secondaryText,
-      fontWeight: '500',
-      maxWidth: 48,
-      textAlign: 'center',
     },
-    avatarOverflow: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.border,
+    treeCardBtn: {
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 6,
+      gap: 6,
+      marginTop: spacing.sm,
+      paddingVertical: 10,
+      borderRadius: 12,
     },
-    avatarOverflowText: {
+    treeCardBtnText: {
       fontSize: 13,
-      fontWeight: '600',
-      color: theme.secondaryText,
-      letterSpacing: 0.2,
+      fontWeight: '700',
     },
 
     // Recent Activity

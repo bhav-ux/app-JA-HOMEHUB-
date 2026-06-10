@@ -28,6 +28,7 @@ import EventDetailsScreen from './screens/EventDetailsScreen';
 import FamilySetupScreen from './screens/FamilySetupScreen';
 import FamilyManagementScreen from './screens/FamilyManagementScreen';
 import HomeDashboardScreen from './screens/HomeDashboardScreen';
+import FamilyTreeScreen from './screens/FamilyTreeScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import NewChatScreen from './screens/NewChatScreen';
 import { auth, db } from './firebaseConfig';
@@ -297,6 +298,9 @@ function AppNavigator() {
           }}
         >
           {(props) => <MainTabs {...props} familyId={familyId} />}
+        </Stack.Screen>
+        <Stack.Screen name="FamilyTree" options={{ headerShown: false }}>
+          {(props) => <FamilyTreeScreen {...props} familyId={familyId} />}
         </Stack.Screen>
         <Stack.Screen name="Events" component={EventsScreen} options={{ title: 'Events' }} />
         <Stack.Screen name="AddEvent" component={AddEventScreen} options={{ title: 'Add Event' }} />
