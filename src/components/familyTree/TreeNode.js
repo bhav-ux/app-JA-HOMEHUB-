@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedCard from '../AnimatedCard';
 import { createThemedStyles, useAppTheme } from '../../theme';
@@ -21,11 +21,12 @@ function getAvatarColor(name) {
   return AVATAR_PALETTE[name.charCodeAt(0) % AVATAR_PALETTE.length];
 }
 
-export default function TreeNode({ node, relationshipLabel, onPress, compact = false, style }) {
+export default function TreeNode({ node, relationshipLabel, onPress, onQuickAdd, isSelf = false, compact = false, style }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
   const { member } = node;
   const size = compact ? 44 : NODE_SIZE;
+  const ringColor = isSelf ? theme.primary : getAvatarColor(member.name);
 
   return (
     <View
@@ -39,36 +40,59 @@ export default function TreeNode({ node, relationshipLabel, onPress, compact = f
         <View style={styles.content}>
           <View
             style={[
-              styles.photoWrap,
-              { width: size, height: size, borderRadius: size / 2 },
-              member.isPlaceholder && styles.photoWrapPlaceholder,
+              styles.photoRing,
+              {
+                width: size + 6,
+                height: size + 6,
+                borderRadius: (size + 6) / 2,
+                borderColor: ringColor,
+              },
             ]}
           >
-            {member.photoURL ? (
-              <Image source={{ uri: member.photoURL }} style={styles.photo} />
-            ) : (
-              <View style={[styles.initialsCircle, { backgroundColor: getAvatarColor(member.name) }]}>
-                <Text style={[styles.initialsText, { fontSize: size * 0.36 }]}>
-                  {getInitials(member.name)}
-                </Text>
-              </View>
-            )}
-            {member.isPlaceholder && (
-              <View style={[styles.badge, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <Ionicons name="person-add-outline" size={10} color={theme.secondaryText} />
-              </View>
-            )}
+            <View
+              style={[
+                styles.photoWrap,
+                { width: size, height: size, borderRadius: size / 2 },
+                member.isPlaceholder && styles.photoWrapPlaceholder,
+              ]}
+            >
+              {member.photoURL ? (
+                <Image source={{ uri: member.photoURL }} style={styles.photo} />
+              ) : (
+                <View style={[styles.initialsCircle, { backgroundColor: getAvatarColor(member.name) }]}>
+                  <Text style={[styles.initialsText, { fontSize: size * 0.36 }]}>
+                    {getInitials(member.name)}
+                  </Text>
+                </View>
+              )}
+              {member.isPlaceholder && (
+                <View style={[styles.badge, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Ionicons name="person-add-outline" size={10} color={theme.secondaryText} />
+                </View>
+              )}
+            </View>
           </View>
           <Text style={[styles.name, compact && styles.nameCompact]} numberOfLines={1}>
             {member.name}
           </Text>
-          {!compact && relationshipLabel ? (
+          {!compact ? (
             <Text style={styles.relationship} numberOfLines={1}>
-              {relationshipLabel}
+              {isSelf ? 'You' : relationshipLabel || ' '}
             </Text>
           ) : null}
         </View>
       </AnimatedCard>
+
+      {!compact && onQuickAdd ? (
+        <TouchableOpacity
+          style={[styles.quickAdd, { backgroundColor: theme.primary, borderColor: theme.card }]}
+          onPress={() => onQuickAdd(member)}
+          accessibilityLabel={`Add a relative of ${member.name}`}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Ionicons name="add" size={14} color="#FFFFFF" />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -83,11 +107,17 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       alignItems: 'center',
       width: '100%',
     },
+    photoRing: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      backgroundColor: theme.card,
+      ...shadow,
+    },
     photoWrap: {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.card,
-      ...shadow,
     },
     photoWrapPlaceholder: {
       borderWidth: 2,
@@ -141,6 +171,18 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       color: theme.secondaryText,
       textAlign: 'center',
       maxWidth: CARD_WIDTH,
+    },
+    quickAdd: {
+      position: 'absolute',
+      top: -4,
+      right: 6,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...shadow,
     },
   })
 );

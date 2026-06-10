@@ -19,7 +19,7 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-export default function FamilyTreeCanvas({ members, relationships, getRelationshipLabel, onNodePress }) {
+export default function FamilyTreeCanvas({ members, relationships, getRelationshipLabel, onNodePress, onQuickAdd, currentUserId }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
@@ -55,6 +55,12 @@ export default function FamilyTreeCanvas({ members, relationships, getRelationsh
       Animated.spring(translateY, { toValue: initialOffset.y, useNativeDriver: false, friction: 8 }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: false, friction: 8 }),
     ]).start();
+  };
+
+  const zoomBy = (factor) => {
+    const next = clamp(base.current.scale * factor, MIN_SCALE, MAX_SCALE);
+    base.current.scale = next;
+    Animated.spring(scale, { toValue: next, useNativeDriver: false, friction: 8 }).start();
   };
 
   const panResponder = useRef(
@@ -125,18 +131,38 @@ export default function FamilyTreeCanvas({ members, relationships, getRelationsh
             node={node}
             relationshipLabel={getRelationshipLabel?.(node.id)}
             onPress={() => onNodePress?.(node.member)}
+            onQuickAdd={onQuickAdd}
+            isSelf={!!currentUserId && node.member.userId === currentUserId}
           />
         ))}
       </Animated.View>
 
-      <AnimatedCard
-        style={[styles.recenterBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
-        onPress={recenter}
-        accessibilityLabel="Recenter tree"
-        scaleDown={0.92}
-      >
-        <Ionicons name="locate-outline" size={20} color={theme.primary} />
-      </AnimatedCard>
+      <View style={styles.toolbar} pointerEvents="box-none">
+        <AnimatedCard
+          style={[styles.toolbarBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={() => zoomBy(1.25)}
+          accessibilityLabel="Zoom in"
+          scaleDown={0.92}
+        >
+          <Ionicons name="add" size={20} color={theme.primary} />
+        </AnimatedCard>
+        <AnimatedCard
+          style={[styles.toolbarBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={() => zoomBy(0.8)}
+          accessibilityLabel="Zoom out"
+          scaleDown={0.92}
+        >
+          <Ionicons name="remove" size={20} color={theme.primary} />
+        </AnimatedCard>
+        <AnimatedCard
+          style={[styles.toolbarBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={recenter}
+          accessibilityLabel="Recenter tree"
+          scaleDown={0.92}
+        >
+          <Ionicons name="locate-outline" size={20} color={theme.primary} />
+        </AnimatedCard>
+      </View>
     </View>
   );
 }
@@ -147,10 +173,13 @@ const useStyles = createThemedStyles(({ shadow }) =>
       flex: 1,
       overflow: 'hidden',
     },
-    recenterBtn: {
+    toolbar: {
       position: 'absolute',
       bottom: 24,
-      right: 20,
+      left: 20,
+      gap: 10,
+    },
+    toolbarBtn: {
       width: 44,
       height: 44,
       borderRadius: 22,

@@ -9,12 +9,14 @@ import FamilyTreeCanvas from '../src/components/familyTree/FamilyTreeCanvas';
 import AddFamilyMemberSheet from '../src/components/familyTree/AddFamilyMemberSheet';
 import FamilyMemberSheet from '../src/components/familyTree/FamilyMemberSheet';
 import {
+  clearFamilyTree,
   ensureSelfMember,
   relationshipLabel,
   subscribeFamilyMembers,
   subscribeRelationships,
 } from '../services/familyTreeService';
 import { getRelationshipLabelsForMember } from '../utils/familyTreeLayout';
+import { showAlert, showConfirm } from '../utils/dialogs';
 import { createThemedStyles, spacing, useAppTheme } from '../src/theme';
 
 export default function FamilyTreeScreen({ navigation, route, familyId: familyIdProp }) {
@@ -28,7 +30,9 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
   const [relationships, setRelationships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addVisible, setAddVisible] = useState(false);
+  const [addPresetRelativeId, setAddPresetRelativeId] = useState(null);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     if (!familyId) { setMembers([]); setLoading(false); return; }
@@ -65,6 +69,40 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
 
   const selectedMember = selectedMemberId ? membersById.get(selectedMemberId) || null : null;
 
+  const handleAddPress = () => {
+    setAddPresetRelativeId(null);
+    setAddVisible(true);
+  };
+
+  const handleQuickAdd = (member) => {
+    setAddPresetRelativeId(member.id);
+    setAddVisible(true);
+  };
+
+  const handleCloseAdd = () => {
+    setAddVisible(false);
+    setAddPresetRelativeId(null);
+  };
+
+  const handleClearTree = () => {
+    setMenuVisible(false);
+    showConfirm(
+      'Clear Family Tree',
+      `This permanently deletes all ${members.length} member${members.length === 1 ? '' : 's'} and ${relationships.length} connection${relationships.length === 1 ? '' : 's'}. This can't be undone.`,
+      {
+        confirmText: 'Clear Tree',
+        onConfirm: async () => {
+          try {
+            await clearFamilyTree(familyId, members, relationships);
+          } catch (error) {
+            console.error('[FamilyTreeScreen] Failed to clear tree', error);
+            showAlert('Error', 'Could not clear the family tree. Please try again.');
+          }
+        },
+      }
+    );
+  };
+
   const gradientColors = isDark
     ? [theme.background, '#1A2030']
     : ['#F8F8F5', '#EEF1FE'];
@@ -89,8 +127,35 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
             <Text style={styles.headerTitle}>🌳 Family Tree</Text>
             <Text style={styles.headerSubtitle}>See how everyone is connected</Text>
           </View>
-          <View style={styles.headerSpacer} />
+          {familyId && members.length > 0 ? (
+            <TouchableOpacity
+              onPress={() => setMenuVisible((v) => !v)}
+              style={styles.backBtn}
+              accessibilityLabel="Family tree options"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color={theme.text} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerSpacer} />
+          )}
         </View>
+
+        {menuVisible && (
+          <>
+            <TouchableOpacity
+              style={styles.menuOverlay}
+              activeOpacity={1}
+              onPress={() => setMenuVisible(false)}
+            />
+            <View style={[styles.menu, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <TouchableOpacity style={styles.menuItem} onPress={handleClearTree}>
+                <Ionicons name="trash-outline" size={18} color={theme.error} />
+                <Text style={[styles.menuItemText, { color: theme.error }]}>Clear Family Tree</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         {!familyId ? (
           <View style={styles.centered}>
@@ -111,7 +176,7 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
             </Text>
             <TouchableOpacity
               style={[styles.emptyCta, { backgroundColor: theme.primary }]}
-              onPress={() => setAddVisible(true)}
+              onPress={handleAddPress}
             >
               <Ionicons name="add" size={18} color="#FFFFFF" />
               <Text style={styles.emptyCtaText}>Add a family member</Text>
@@ -123,6 +188,8 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
             relationships={relationships}
             getRelationshipLabel={getRelationshipLabel}
             onNodePress={(member) => setSelectedMemberId(member.id)}
+            onQuickAdd={handleQuickAdd}
+            currentUserId={user?.uid}
           />
         )}
       </SafeAreaView>
@@ -130,7 +197,7 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
       {familyId && members.length > 0 && (
         <AnimatedCard
           style={[styles.fab, { backgroundColor: theme.primary, bottom: insets.bottom + spacing.lg }]}
-          onPress={() => setAddVisible(true)}
+          onPress={handleAddPress}
           accessibilityLabel="Add family member"
           scaleDown={0.92}
         >
@@ -140,9 +207,10 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
 
       <AddFamilyMemberSheet
         visible={addVisible}
-        onClose={() => setAddVisible(false)}
+        onClose={handleCloseAdd}
         familyId={familyId}
         members={members}
+        presetRelativeId={addPresetRelativeId}
       />
 
       <FamilyMemberSheet
@@ -212,6 +280,32 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       marginTop: 2,
       fontSize: 12,
       color: theme.secondaryText,
+    },
+    menuOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 10,
+    },
+    menu: {
+      position: 'absolute',
+      top: 52,
+      right: spacing.lg,
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingVertical: 4,
+      minWidth: 200,
+      zIndex: 20,
+      ...shadow,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: 12,
+      paddingHorizontal: spacing.md,
+    },
+    menuItemText: {
+      fontSize: 14,
+      fontWeight: '600',
     },
     centered: {
       flex: 1,

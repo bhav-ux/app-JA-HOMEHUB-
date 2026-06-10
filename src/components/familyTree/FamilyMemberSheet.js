@@ -21,6 +21,7 @@ import Input from '../Input';
 import {
   RELATIONSHIP_TYPES,
   addRelationship,
+  deleteFamilyMember,
   deleteRelationship,
   relationshipLabel,
   updateFamilyMember,
@@ -210,6 +211,25 @@ export default function FamilyMemberSheet({
     }
   };
 
+  const handleDeleteMember = () => {
+    showConfirm(
+      'Remove from Family Tree',
+      `${displayName} and all of their connections will be permanently removed. This can't be undone.`,
+      {
+        confirmText: 'Remove',
+        onConfirm: async () => {
+          try {
+            await deleteFamilyMember(familyId, member.id, relationships);
+            onClose?.();
+          } catch (error) {
+            console.error('[FamilyMemberSheet] Failed to delete member', error);
+            showAlert('Error', 'Could not remove this family member.');
+          }
+        },
+      }
+    );
+  };
+
   const handleDeleteRelationship = (rel) => {
     showConfirm('Remove Relationship', 'Remove this connection from the family tree?', {
       confirmText: 'Remove',
@@ -354,6 +374,13 @@ export default function FamilyMemberSheet({
                 <Input label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
                 <Button label="Save Changes" onPress={handleSaveDetails} loading={saving} style={styles.saveBtn} />
+
+                {!isSelf ? (
+                  <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteMember}>
+                    <Ionicons name="trash-outline" size={16} color={theme.error} />
+                    <Text style={[styles.deleteBtnText, { color: theme.error }]}>Remove from Family Tree</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ) : (
               <View style={styles.infoList}>
@@ -646,6 +673,17 @@ const useStyles = createThemedStyles(({ theme, radius, typography, shadow }) =>
     },
     saveBtn: {
       marginTop: spacing.sm,
+    },
+    deleteBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: spacing.sm,
+    },
+    deleteBtnText: {
+      fontSize: typography.body.fontSize,
+      fontWeight: '700',
     },
     sectionLabel: {
       fontSize: 11,

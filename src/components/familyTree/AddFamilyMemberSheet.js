@@ -56,7 +56,7 @@ function formatDate(date) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
-export default function AddFamilyMemberSheet({ visible, onClose, familyId, members, onAdded }) {
+export default function AddFamilyMemberSheet({ visible, onClose, familyId, members, onAdded, presetRelativeId }) {
   const { theme } = useAppTheme();
   const styles = useStyles();
   const user = auth.currentUser;
@@ -90,9 +90,9 @@ export default function AddFamilyMemberSheet({ visible, onClose, familyId, membe
     setShowDatePicker(false);
     setSelectedUser(null);
     setRelationshipType(null);
-    setRelativeId(null);
+    setRelativeId(presetRelativeId || null);
     setSaving(false);
-  }, [visible]);
+  }, [visible, presetRelativeId]);
 
   useEffect(() => {
     if (!visible || mode !== 'existing' || !familyId) return;
@@ -206,6 +206,7 @@ export default function AddFamilyMemberSheet({ visible, onClose, familyId, membe
   };
 
   const relativeName = members?.find((m) => m.id === relativeId)?.name;
+  const presetRelativeName = members?.find((m) => m.id === presetRelativeId)?.name;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -216,7 +217,12 @@ export default function AddFamilyMemberSheet({ visible, onClose, familyId, membe
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <View style={styles.headerRow}>
-            <Text style={styles.title}>Add Family Member</Text>
+            <View>
+              <Text style={styles.title}>Add Family Member</Text>
+              {presetRelativeName ? (
+                <Text style={styles.subtitle}>Connecting to {presetRelativeName}</Text>
+              ) : null}
+            </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="close" size={24} color={theme.secondaryText} />
             </TouchableOpacity>
@@ -439,7 +445,7 @@ const useStyles = createThemedStyles(({ theme, radius, typography, shadow }) =>
     },
     headerRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       marginBottom: spacing.md,
     },
@@ -447,6 +453,12 @@ const useStyles = createThemedStyles(({ theme, radius, typography, shadow }) =>
       fontSize: 18,
       fontWeight: '700',
       color: theme.text,
+    },
+    subtitle: {
+      marginTop: 2,
+      fontSize: typography.small.fontSize,
+      color: theme.primary,
+      fontWeight: '600',
     },
     modeRow: {
       flexDirection: 'row',

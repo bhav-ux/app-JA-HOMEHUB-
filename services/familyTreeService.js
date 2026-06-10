@@ -7,6 +7,7 @@ import {
   onSnapshot,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { uploadImage } from '../utils/uploadImage';
@@ -161,4 +162,24 @@ export async function updateRelationship(familyId, relationshipId, data) {
 
 export async function deleteRelationship(familyId, relationshipId) {
   await deleteDoc(doc(db, 'families', familyId, 'relationships', relationshipId));
+}
+
+// ─── Destructive operations ─────────────────────────────────────────────────
+
+// Removes a member and every relationship that references them.
+export async function deleteFamilyMember(familyId, memberId, relationships) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'families', familyId, 'familyMembers', memberId));
+  (relationships || [])
+    .filter((rel) => rel.fromMemberId === memberId || rel.toMemberId === memberId)
+    .forEach((rel) => batch.delete(doc(db, 'families', familyId, 'relationships', rel.id)));
+  await batch.commit();
+}
+
+// Wipes every member and relationship in the family tree.
+export async function clearFamilyTree(familyId, members, relationships) {
+  const batch = writeBatch(db);
+  (relationships || []).forEach((rel) => batch.delete(doc(db, 'families', familyId, 'relationships', rel.id)));
+  (members || []).forEach((member) => batch.delete(doc(db, 'families', familyId, 'familyMembers', member.id)));
+  await batch.commit();
 }
