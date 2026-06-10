@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   ScrollView,
   View,
   Text,
@@ -260,6 +261,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <Animated.View style={[styles.flex, { opacity: contentFade }]} pointerEvents="auto">
+        <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <ScrollView
           contentContainerStyle={[styles.container, { paddingBottom: spacing.xxl + spacing.xl + insets.bottom }]}
           showsVerticalScrollIndicator={false}
@@ -441,6 +443,7 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
             <Button label="Log Out" onPress={handleLogout} variant="secondary" />
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       </Animated.View>
     </SafeAreaView>
   );

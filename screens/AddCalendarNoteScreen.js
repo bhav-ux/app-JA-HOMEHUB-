@@ -150,7 +150,7 @@ export default function AddCalendarNoteScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.lg }]} keyboardShouldPersistTaps="handled">
           <Text style={styles.header}>Add Calendar Note</Text>
           <Input label="Title" placeholder="Note title" value={title} onChangeText={setTitle} />

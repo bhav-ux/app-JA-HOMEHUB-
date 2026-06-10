@@ -198,7 +198,7 @@ export default function AddEventScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.safeArea}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={[styles.container, { paddingBottom: spacing.lg + insets.bottom }]}

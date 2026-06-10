@@ -431,7 +431,7 @@ export default function ChatScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={styles.keyboardAvoider} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+      <KeyboardAvoidingView style={styles.keyboardAvoider} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
         <FlatList
           ref={listRef}
           data={messages}
