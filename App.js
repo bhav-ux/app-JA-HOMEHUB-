@@ -29,6 +29,11 @@ import FamilySetupScreen from './screens/FamilySetupScreen';
 import FamilyManagementScreen from './screens/FamilyManagementScreen';
 import HomeDashboardScreen from './screens/HomeDashboardScreen';
 import FamilyTreeScreen from './screens/FamilyTreeScreen';
+import RewardsHomeScreen from './screens/RewardsHomeScreen';
+import RewardsLeaderboardScreen from './screens/RewardsLeaderboardScreen';
+import RewardsShopScreen from './screens/RewardsShopScreen';
+import RewardsVerificationScreen from './screens/RewardsVerificationScreen';
+import RewardsManageChoresScreen from './screens/RewardsManageChoresScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import NewChatScreen from './screens/NewChatScreen';
 import { auth, db } from './firebaseConfig';
@@ -301,6 +306,21 @@ function AppNavigator() {
         </Stack.Screen>
         <Stack.Screen name="FamilyTree" options={{ headerShown: false }}>
           {(props) => <FamilyTreeScreen {...props} familyId={familyId} />}
+        </Stack.Screen>
+        <Stack.Screen name="RewardsHome" options={{ headerShown: false }}>
+          {(props) => <RewardsHomeScreen {...props} familyId={familyId} />}
+        </Stack.Screen>
+        <Stack.Screen name="RewardsLeaderboard" options={{ headerShown: false }}>
+          {(props) => <RewardsLeaderboardScreen {...props} familyId={familyId} />}
+        </Stack.Screen>
+        <Stack.Screen name="RewardsShop" options={{ headerShown: false }}>
+          {(props) => <RewardsShopScreen {...props} familyId={familyId} />}
+        </Stack.Screen>
+        <Stack.Screen name="RewardsVerification" options={{ headerShown: false }}>
+          {(props) => <RewardsVerificationScreen {...props} familyId={familyId} />}
+        </Stack.Screen>
+        <Stack.Screen name="RewardsManageChores" options={{ headerShown: false }}>
+          {(props) => <RewardsManageChoresScreen {...props} familyId={familyId} />}
         </Stack.Screen>
         <Stack.Screen name="Events" component={EventsScreen} options={{ title: 'Events' }} />
         <Stack.Screen name="AddEvent" component={AddEventScreen} options={{ title: 'Add Event' }} />

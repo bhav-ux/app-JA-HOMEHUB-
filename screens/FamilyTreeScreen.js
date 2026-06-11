@@ -17,6 +17,7 @@ import {
 } from '../services/familyTreeService';
 import { getRelationshipLabelsForMember } from '../utils/familyTreeLayout';
 import { showAlert, showConfirm } from '../utils/dialogs';
+import { hapticLight } from '../utils/haptics';
 import { createThemedStyles, spacing, useAppTheme } from '../src/theme';
 
 export default function FamilyTreeScreen({ navigation, route, familyId: familyIdProp }) {
@@ -116,7 +117,14 @@ export default function FamilyTreeScreen({ navigation, route, familyId: familyId
       <SafeAreaView style={styles.flex} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              hapticLight();
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate('MainTabs');
+              }
+            }}
             style={styles.backBtn}
             accessibilityLabel="Go back"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

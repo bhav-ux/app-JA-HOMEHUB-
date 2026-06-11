@@ -16,9 +16,15 @@ import { auth, db } from '../firebaseConfig';
 import { subscribeToEvents } from '../services/eventService';
 import { subscribeToMessages } from '../services/chatService';
 import { subscribeFamilyMembers, subscribeRelationships } from '../services/familyTreeService';
+import { getEmptyStats, subscribeUserStats } from '../services/rewardsService';
+import { getLevelInfo } from '../utils/rewardsLevels';
 import { createThemedStyles, spacing, useAppTheme } from '../src/theme';
 import AnimatedCard from '../src/components/AnimatedCard';
 import MiniFamilyTree from '../src/components/familyTree/MiniFamilyTree';
+import ProgressBar from '../src/components/rewards/ProgressBar';
+import StreakBadge from '../src/components/rewards/StreakBadge';
+import PointsPill from '../src/components/rewards/PointsPill';
+import { ACCENT } from '../src/components/rewards/rewardsTheme';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -100,6 +106,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
   const [familyTreeMembers, setFamilyTreeMembers] = useState([]);
   const [familyTreeRelationships, setFamilyTreeRelationships] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [userStats, setUserStats] = useState([]);
 
   useEffect(() => {
     Animated.parallel([
@@ -148,6 +155,11 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
   }, [familyId]);
 
   useEffect(() => {
+    if (!familyId) { setUserStats([]); return; }
+    return subscribeUserStats(familyId, setUserStats, () => setUserStats([]));
+  }, [familyId]);
+
+  useEffect(() => {
     if (!familyId) { setEvents([]); setEventsLoading(false); return; }
     setEventsLoading(true);
     return subscribeToEvents({
@@ -171,6 +183,12 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
     members.forEach((m) => { map[m.uid] = m.name; });
     return map;
   }, [members]);
+
+  const myRewardsStats = useMemo(
+    () => userStats.find((s) => s.id === user?.uid) || getEmptyStats(user?.uid),
+    [userStats, user?.uid]
+  );
+  const myLevelInfo = useMemo(() => getLevelInfo(myRewardsStats.lifetimePoints), [myRewardsStats.lifetimePoints]);
 
   const upcomingEvent = useMemo(() => {
     const now = new Date();
@@ -378,6 +396,40 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
             <View style={[styles.treeCardBtn, { backgroundColor: theme.primaryLight }]}>
               <Text style={[styles.treeCardBtnText, { color: theme.primary }]}>View Full Tree</Text>
               <Ionicons name="arrow-forward" size={14} color={theme.primary} />
+            </View>
+          </AnimatedCard>
+        </View>
+
+        {/* Rewards */}
+        <View style={styles.section}>
+          <Text style={styles.sectionChip}>REWARDS</Text>
+          <AnimatedCard
+            style={styles.rewardsCard}
+            onPress={() => navigation.navigate('RewardsHome', { familyId })}
+            accessibilityLabel="Open Family Rewards"
+            scaleDown={0.98}
+          >
+            <View style={styles.rewardsHeader}>
+              <View style={styles.rewardsTitleWrap}>
+                <View style={styles.rewardsLevelRow}>
+                  <Text style={styles.rewardsLevelIcon}>{myLevelInfo.icon}</Text>
+                  <View>
+                    <Text style={styles.rewardsTitle}>🏆 Family Rewards</Text>
+                    <Text style={styles.rewardsSubtitle}>Lv {myLevelInfo.level} · {myLevelInfo.title}</Text>
+                  </View>
+                </View>
+              </View>
+              <PointsPill points={myRewardsStats.balance || 0} />
+            </View>
+
+            <ProgressBar progress={myLevelInfo.progress} color={ACCENT.level} height={8} style={styles.rewardsProgress} />
+
+            <View style={styles.rewardsFooter}>
+              <StreakBadge streak={myRewardsStats.streak || 0} size="sm" />
+              <View style={[styles.treeCardBtn, styles.rewardsBtn, { backgroundColor: ACCENT.levelBg }]}>
+                <Text style={[styles.treeCardBtnText, { color: ACCENT.level }]}>Open Rewards</Text>
+                <Ionicons name="arrow-forward" size={14} color={ACCENT.level} />
+              </View>
             </View>
           </AnimatedCard>
         </View>
@@ -622,6 +674,56 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
     treeCardBtnText: {
       fontSize: 13,
       fontWeight: '700',
+    },
+
+    // Rewards
+    rewardsCard: {
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      padding: spacing.md,
+      ...shadow,
+    },
+    rewardsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
+    },
+    rewardsTitleWrap: {
+      flex: 1,
+    },
+    rewardsLevelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    rewardsLevelIcon: {
+      fontSize: 28,
+    },
+    rewardsTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+      letterSpacing: -0.2,
+    },
+    rewardsSubtitle: {
+      marginTop: 2,
+      fontSize: 12,
+      color: theme.secondaryText,
+    },
+    rewardsProgress: {
+      marginTop: spacing.xs,
+    },
+    rewardsFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: spacing.sm,
+    },
+    rewardsBtn: {
+      flex: 1,
+      marginTop: 0,
+      marginLeft: spacing.sm,
     },
 
     // Recent Activity

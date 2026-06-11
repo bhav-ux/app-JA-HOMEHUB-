@@ -129,7 +129,7 @@ export async function deleteFamily({ familyId, memberIds }) {
   await batch.commit();
 
   // Best-effort: delete known subcollections (Firestore does not auto-cascade).
-  const subcols = ['events', 'albums', 'chats', 'messages', 'notes'];
+  const subcols = ['events', 'albums', 'chats', 'messages', 'notes', 'chores', 'choreSubmissions', 'rewards', 'userStats', 'rewardRedemptions'];
   for (const sub of subcols) {
     try {
       const snap = await getDocs(collection(db, 'families', familyId, sub));

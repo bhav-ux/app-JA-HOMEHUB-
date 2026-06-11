@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -136,10 +137,13 @@ export default function OnboardingScreen({ navigation }) {
       style={[styles.root, { backgroundColor: slide.bg }]}
       edges={['top', 'left', 'right']}
     >
+      {/* Onboarding always uses a dark backdrop, so force light status bar icons */}
+      <StatusBar style="light" />
+
       {/* ── Skip button (hidden on final slide) ── */}
       {!isLast && (
         <TouchableOpacity
-          style={[styles.skipBtn, { marginTop: insets.top > 0 ? 0 : 12 }]}
+          style={[styles.skipBtn, { top: insets.top + 12 }]}
           onPress={handleSkip}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           activeOpacity={0.7}
@@ -295,7 +299,6 @@ const styles = StyleSheet.create({
   // ── Skip ──
   skipBtn: {
     position: 'absolute',
-    top: 16,
     right: 22,
     zIndex: 20,
     paddingHorizontal: 14,

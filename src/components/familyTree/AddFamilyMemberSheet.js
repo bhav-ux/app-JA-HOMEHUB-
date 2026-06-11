@@ -27,6 +27,7 @@ import {
   updateFamilyMember,
   uploadMemberPhoto,
 } from '../../../services/familyTreeService';
+import { hapticLight } from '../../../utils/haptics';
 import { showAlert } from '../../../utils/dialogs';
 import { createThemedStyles, spacing, useAppTheme } from '../../theme';
 
@@ -223,7 +224,13 @@ export default function AddFamilyMemberSheet({ visible, onClose, familyId, membe
                 <Text style={styles.subtitle}>Connecting to {presetRelativeName}</Text>
               ) : null}
             </View>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={() => {
+                hapticLight();
+                onClose?.();
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Ionicons name="close" size={24} color={theme.secondaryText} />
             </TouchableOpacity>
           </View>

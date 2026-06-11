@@ -29,6 +29,7 @@ import {
 } from '../../../services/familyTreeService';
 import { createOrGetDM } from '../../../services/chatService';
 import { showAlert, showConfirm } from '../../../utils/dialogs';
+import { hapticLight, hapticSelection } from '../../../utils/haptics';
 import { createThemedStyles, spacing, useAppTheme } from '../../theme';
 
 const AVATAR_PALETTE = [
@@ -284,14 +285,23 @@ export default function FamilyMemberSheet({
             <View style={styles.headerActions}>
               {!isSelf || isPlaceholder ? (
                 <TouchableOpacity
-                  onPress={() => setEditing((e) => !e)}
+                  onPress={() => {
+                    hapticSelection();
+                    setEditing((e) => !e);
+                  }}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   style={styles.headerIconBtn}
                 >
-                  <Ionicons name={editing ? 'close-outline' : 'pencil-outline'} size={20} color={theme.primary} />
+                  <Ionicons name={editing ? 'arrow-undo-outline' : 'pencil-outline'} size={20} color={theme.primary} />
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  hapticLight();
+                  onClose?.();
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Ionicons name="close" size={24} color={theme.secondaryText} />
               </TouchableOpacity>
             </View>
@@ -467,7 +477,7 @@ export default function FamilyMemberSheet({
                       </>
                     ) : null}
                     <View style={styles.addRelActions}>
-                      <TouchableOpacity onPress={() => { setAddingRelation(false); setNewRelType(null); setNewRelTarget(null); }} style={styles.cancelBtn}>
+                      <TouchableOpacity onPress={() => { hapticLight(); setAddingRelation(false); setNewRelType(null); setNewRelTarget(null); }} style={styles.cancelBtn}>
                         <Text style={styles.cancelBtnText}>Cancel</Text>
                       </TouchableOpacity>
                       <Button

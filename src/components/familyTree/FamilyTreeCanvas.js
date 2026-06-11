@@ -5,6 +5,7 @@ import AnimatedCard from '../AnimatedCard';
 import TreeConnectors from './TreeConnectors';
 import TreeNode from './TreeNode';
 import { computeFamilyTreeLayout } from '../../../utils/familyTreeLayout';
+import { hapticLight, hapticMedium } from '../../../utils/haptics';
 import { createThemedStyles, useAppTheme } from '../../theme';
 
 const MIN_SCALE = 0.5;
@@ -32,6 +33,7 @@ export default function FamilyTreeCanvas({ members, relationships, getRelationsh
 
   const base = useRef({ x: 0, y: 0, scale: 1 });
   const lastDistance = useRef(null);
+  const atScaleLimit = useRef(false);
   const initialized = useRef(false);
 
   const initialOffset = useMemo(() => {
@@ -49,6 +51,7 @@ export default function FamilyTreeCanvas({ members, relationships, getRelationsh
   }
 
   const recenter = () => {
+    hapticMedium();
     base.current = { x: initialOffset.x, y: initialOffset.y, scale: 1 };
     Animated.parallel([
       Animated.spring(translateX, { toValue: initialOffset.x, useNativeDriver: false, friction: 8 }),
@@ -59,7 +62,12 @@ export default function FamilyTreeCanvas({ members, relationships, getRelationsh
 
   const zoomBy = (factor) => {
     const next = clamp(base.current.scale * factor, MIN_SCALE, MAX_SCALE);
+    if (next === base.current.scale) {
+      hapticLight();
+      return;
+    }
     base.current.scale = next;
+    hapticLight();
     Animated.spring(scale, { toValue: next, useNativeDriver: false, friction: 8 }).start();
   };
 
@@ -84,7 +92,14 @@ export default function FamilyTreeCanvas({ members, relationships, getRelationsh
           const dist = distance(touches);
           if (lastDistance.current != null) {
             const ratio = dist / lastDistance.current;
-            const next = clamp(base.current.scale * ratio, MIN_SCALE, MAX_SCALE);
+            const raw = base.current.scale * ratio;
+            const next = clamp(raw, MIN_SCALE, MAX_SCALE);
+            if (raw !== next && (next === MIN_SCALE || next === MAX_SCALE)) {
+              if (!atScaleLimit.current) hapticLight();
+              atScaleLimit.current = true;
+            } else {
+              atScaleLimit.current = false;
+            }
             scale.setValue(next);
           }
           lastDistance.current = dist;
@@ -102,6 +117,7 @@ export default function FamilyTreeCanvas({ members, relationships, getRelationsh
           scale.stopAnimation((value) => { base.current.scale = value; });
         }
         lastDistance.current = null;
+        atScaleLimit.current = false;
       },
     })
   ).current;
