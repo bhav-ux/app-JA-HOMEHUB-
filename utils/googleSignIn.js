@@ -32,6 +32,12 @@ export function getGoogleOAuthClientIds() {
   const webClientId = getGoogleWebClientId();
   const extra = Constants.expoConfig?.extra || {};
 
+  console.log({
+    webClientId,
+    androidClientId: extra.googleAndroidClientId,
+    iosClientId: extra.googleIosClientId,
+  });
+
   return {
     webClientId,
     iosClientId: extra.googleIosClientId || webClientId,
