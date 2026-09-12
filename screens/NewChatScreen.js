@@ -17,54 +17,10 @@ import {
   createOrGetDM,
   subscribeToFamilyMemberIds,
 } from '../services/chatService';
+import HomeHubAvatar from '../src/components/ui/HomeHubAvatar';
 import { createThemedStyles, spacing, typography, useAppTheme, radius } from '../src/theme';
 import { showAlert } from '../utils/dialogs';
 import { listenToUserDisplayName } from '../utils/user';
-
-// ---------------------------------------------------------------------------
-// Constants & helpers
-// ---------------------------------------------------------------------------
-
-const AVATAR_COLORS = [
-  '#6366F1', '#F43F5E', '#F59E0B', '#0D9488',
-  '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
-];
-
-function getAvatarColor(str) {
-  if (!str) return AVATAR_COLORS[0];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function getInitials(name) {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
-
-function InitialsAvatar({ name, size = 44, uid, emoji }) {
-  const bg = getAvatarColor(uid || name || '');
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: bg,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text style={{ fontSize: emoji ? size * 0.5 : size * 0.38, color: '#fff', fontWeight: '700' }}>
-        {emoji || getInitials(name)}
-      </Text>
-    </View>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main screen
@@ -266,7 +222,7 @@ export default function NewChatScreen({ navigation, route }) {
                       activeOpacity={0.75}
                       disabled={!!creatingDmFor}
                     >
-                      <InitialsAvatar name={memberName} uid={uid} size={44} />
+                      <HomeHubAvatar name={memberName} seed={uid} size={44} />
                       <View style={styles.memberInfo}>
                         <Text style={styles.memberName}>{memberName}</Text>
                       </View>
@@ -313,7 +269,7 @@ export default function NewChatScreen({ navigation, route }) {
               {/* Current user row — always selected, disabled */}
               {currentUser && (
                 <View style={[styles.memberRow, styles.memberRowSelected]}>
-                  <InitialsAvatar name={nameMap[currentUser.uid] || 'You'} uid={currentUser.uid} size={44} />
+                  <HomeHubAvatar name={nameMap[currentUser.uid] || 'You'} seed={currentUser.uid} size={44} />
                   <View style={styles.memberInfo}>
                     <Text style={styles.memberName}>{nameMap[currentUser.uid] || 'You'}</Text>
                     <Text style={styles.memberSubtext}>You</Text>
@@ -334,7 +290,7 @@ export default function NewChatScreen({ navigation, route }) {
                     onPress={() => toggleMember(uid)}
                     activeOpacity={0.75}
                   >
-                    <InitialsAvatar name={memberName} uid={uid} size={44} />
+                    <HomeHubAvatar name={memberName} seed={uid} size={44} />
                     <View style={styles.memberInfo}>
                       <Text style={styles.memberName}>{memberName}</Text>
                     </View>

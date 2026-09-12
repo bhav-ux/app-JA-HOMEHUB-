@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  KeyboardAvoidingView,
   ScrollView,
   View,
   Text,
@@ -9,45 +8,37 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Switch,
-  Platform,
+  Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { Share } from 'react-native';
 import {
   collection,
   doc,
   getDoc,
   onSnapshot,
   query,
-  updateDoc,
   where,
 } from 'firebase/firestore';
-import { sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
-import { leaveFamily } from '../utils/delete';
-import { ROLES, getRole } from '../utils/familyRoles';
-import { showAlert, showConfirm } from '../utils/dialogs';
-import Button from '../src/components/Button';
-import Input from '../src/components/Input';
+import { getEmptyStats, subscribeUserStats } from '../services/rewardsService';
+import { getLevelInfo } from '../utils/rewardsLevels';
+import PointsPill from '../src/components/rewards/PointsPill';
+import LevelBadge from '../src/components/rewards/LevelBadge';
+import StreakBadge from '../src/components/rewards/StreakBadge';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 
 export default function ProfileScreen({ navigation, route, familyId: familyIdProp }) {
-  const { theme, isDark, toggleTheme } = useAppTheme();
+  const { theme } = useAppTheme();
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState('');
-  const [savingName, setSavingName] = useState(false);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(true);
-  const [familyDoc, setFamilyDoc] = useState(null);
+  const [userStats, setUserStats] = useState([]);
 
   const user = auth.currentUser;
   const familyId = familyIdProp ?? profile?.familyId ?? route?.params?.familyId;
@@ -77,16 +68,13 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        setError('');
         const docRef = doc(db, 'users', user.uid);
         const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
-          if (isMounted) setProfile(snapshot.data());
-        } else if (isMounted) {
-          setError('Profile not found.');
+        if (snapshot.exists() && isMounted) {
+          setProfile(snapshot.data());
         }
       } catch (err) {
-        if (isMounted) setError(getFirebaseErrorMessage(err, 'Unable to load your profile.'));
+        console.error('[ProfileScreen] Failed to load profile', getFirebaseErrorMessage(err));
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -122,36 +110,10 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     return unsubscribe;
   }, [familyId]);
 
-  // Subscribe to family document for realtime role data.
   useEffect(() => {
-    if (!familyId) { setFamilyDoc(null); return; }
-    const unsub = onSnapshot(
-      doc(db, 'families', familyId),
-      (snap) => setFamilyDoc(snap.exists() ? { id: snap.id, ...snap.data() } : null),
-      () => setFamilyDoc(null)
-    );
-    return unsub;
+    if (!familyId) { setUserStats([]); return; }
+    return subscribeUserStats(familyId, setUserStats, () => setUserStats([]));
   }, [familyId]);
-
-  useEffect(() => {
-    if (!isEditingName) {
-      setNameInput(profile?.displayName || '');
-    }
-  }, [profile?.displayName, isEditingName]);
-
-  const handleLogout = useCallback(async () => {
-    try {
-      await signOut(auth);
-      const rootNavigator = navigation.getParent();
-      if (rootNavigator) {
-        rootNavigator.replace('Login');
-      } else {
-        navigation.replace('Login');
-      }
-    } catch (err) {
-      Alert.alert('Error', getFirebaseErrorMessage(err, 'Unable to log out right now.'));
-    }
-  }, [navigation]);
 
   if (!user) return null;
 
@@ -173,101 +135,35 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
     }
   };
 
-  const handleSaveName = async () => {
-    if (!user?.uid) return;
-    const trimmedName = nameInput.trim();
-    if (!trimmedName) {
-      Alert.alert('Missing name', 'Please enter a display name.');
-      return;
-    }
-    setSavingName(true);
-    try {
-      await updateDoc(doc(db, 'users', user.uid), { displayName: trimmedName });
-      setProfile((prev) => (prev ? { ...prev, displayName: trimmedName } : prev));
-      setIsEditingName(false);
-    } catch (err) {
-      Alert.alert('Error', getFirebaseErrorMessage(err, 'Unable to update name right now.'));
-    } finally {
-      setSavingName(false);
-    }
-  };
-
-  const handleResetPassword = useCallback(async () => {
-    const email = user?.email;
-    if (!email) return;
-    showConfirm(
-      'Reset Password',
-      `We'll send a reset link to ${email}.`,
-      {
-        confirmText: 'Send',
-        onConfirm: async () => {
-          try {
-            await sendPasswordResetEmail(auth, email);
-            showAlert('Email sent', `A password reset link has been sent to ${email}.`);
-          } catch (err) {
-            showAlert('Error', getFirebaseErrorMessage(err, 'Unable to send reset email right now.'));
-          }
-        },
-      }
-    );
-  }, [user?.email]);
-
-  const myRole = getRole(familyDoc, user?.uid);
-
-  const handleLeaveFamily = useCallback(() => {
-    if (!user?.uid || !familyId) return;
-
-    if (myRole === ROLES.OWNER) {
-      showAlert(
-        'Transfer ownership first',
-        'You are the family owner. Transfer ownership to another member before leaving.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    showConfirm(
-      'Leave Family',
-      "You'll lose access to this family's events, chats, and albums.",
-      {
-        confirmText: 'Leave',
-        onConfirm: async () => {
-          try {
-            await leaveFamily({ uid: user.uid, familyId });
-            const rootNavigator = navigation.getParent();
-            if (rootNavigator) {
-              rootNavigator.replace('FamilySetup');
-            } else {
-              navigation.replace('FamilySetup');
-            }
-          } catch (err) {
-            showAlert('Error', getFirebaseErrorMessage(err, 'Unable to leave family right now.'));
-          }
-        },
-      }
-    );
-  }, [user?.uid, familyId, myRole, navigation]);
+  const myStats = userStats.find((s) => s.id === user.uid) || getEmptyStats(user.uid);
+  const levelInfo = getLevelInfo(myStats.lifetimePoints);
 
   const displayNameValue = profile?.displayName?.trim() || '';
   const avatarLetter =
     displayNameValue?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?';
-  const isSaveDisabled =
-    savingName ||
-    !nameInput.trim() ||
-    nameInput.trim() === (profile?.displayName || '').trim();
   const shortFamilyId =
     familyId && familyId.length > 16 ? `${familyId.slice(0, 16)}…` : familyId;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <Animated.View style={[styles.flex, { opacity: contentFade }]} pointerEvents="auto">
-        <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <ScrollView
           contentContainerStyle={[styles.container, { paddingBottom: spacing.xxl + spacing.xl + insets.bottom }]}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
         >
           {/* ── SECTION 1: PROFILE HEADER ───────────────────── */}
+          <View style={styles.headerRow}>
+            <View style={styles.headerSpacer} />
+            <TouchableOpacity
+              style={styles.settingsBtn}
+              onPress={() => navigation.navigate('Settings', { familyId })}
+              accessibilityLabel="Open settings"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="settings-outline" size={22} color={theme.text} />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.header}>
             {loading ? (
               <ActivityIndicator size="large" color={theme.primary} />
@@ -278,19 +174,28 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
                 </View>
                 <Text style={styles.headerName}>{displayNameValue || 'Add your name'}</Text>
                 <Text style={styles.headerEmail}>{user.email}</Text>
+
                 {familyId ? (
-                  <View style={styles.familyCodeRow}>
-                    <Text style={styles.familyCodeMeta}>Family · </Text>
-                    <Text style={styles.familyCodeValue}>{shortFamilyId}</Text>
-                    <Text style={styles.familyCodeMeta}> · </Text>
-                    <TouchableOpacity onPress={handleCopy} activeOpacity={0.6}>
-                      <Text style={[styles.familyCodeAction, { color: theme.primary }]}>Copy</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.familyCodeMeta}> · </Text>
-                    <TouchableOpacity onPress={handleShare} activeOpacity={0.6}>
-                      <Text style={[styles.familyCodeAction, { color: theme.primary }]}>Share</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <>
+                    <View style={styles.statsRow}>
+                      <PointsPill points={myStats.balance || 0} />
+                      <LevelBadge level={levelInfo.level} icon={levelInfo.icon} />
+                      <StreakBadge streak={myStats.streak || 0} size="sm" />
+                    </View>
+
+                    <View style={styles.familyCodeRow}>
+                      <Text style={styles.familyCodeMeta}>Family · </Text>
+                      <Text style={styles.familyCodeValue}>{shortFamilyId}</Text>
+                      <Text style={styles.familyCodeMeta}> · </Text>
+                      <TouchableOpacity onPress={handleCopy} activeOpacity={0.6}>
+                        <Text style={[styles.familyCodeAction, { color: theme.primary }]}>Copy</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.familyCodeMeta}> · </Text>
+                      <TouchableOpacity onPress={handleShare} activeOpacity={0.6}>
+                        <Text style={[styles.familyCodeAction, { color: theme.primary }]}>Share</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
                 ) : null}
               </>
             )}
@@ -337,113 +242,8 @@ export default function ProfileScreen({ navigation, route, familyId: familyIdPro
                 );
               })
             )}
-            {familyId && (myRole === ROLES.OWNER || myRole === ROLES.ADMIN) ? (
-              <TouchableOpacity
-                style={styles.leaveRow}
-                onPress={() => navigation.navigate('FamilyManagement', { familyId })}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Manage Family"
-              >
-                <Ionicons name="settings-outline" size={17} color={theme.primary} />
-                <Text style={[styles.leaveLabel, { color: theme.primary }]}>Manage Family</Text>
-              </TouchableOpacity>
-            ) : null}
-            {familyId ? (
-              <TouchableOpacity
-                style={[styles.leaveRow, (myRole === ROLES.OWNER || myRole === ROLES.ADMIN) && styles.leaveRowBordered]}
-                onPress={handleLeaveFamily}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Leave Family"
-              >
-                <Ionicons name="log-out-outline" size={17} color={theme.error} />
-                <Text style={[styles.leaveLabel, { color: theme.error }]}>Leave Family</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* ── SECTION 3: PREFERENCES ──────────────────────── */}
-          <Text style={styles.sectionTitle}>Preferences</Text>
-          <View style={styles.card}>
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Dark Mode</Text>
-              <Switch
-                value={isDark}
-                onValueChange={toggleTheme}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-
-          {/* ── SECTION 4: ACCOUNT ──────────────────────────── */}
-          <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.card}>
-            {isEditingName ? (
-              <View style={styles.editBlock}>
-                <Text style={styles.settingLabel}>Display Name</Text>
-                <Input
-                  value={nameInput}
-                  onChangeText={setNameInput}
-                  placeholder="Your name"
-                />
-                <View style={styles.editActions}>
-                  <Button
-                    label="Save"
-                    onPress={handleSaveName}
-                    loading={savingName}
-                    disabled={isSaveDisabled}
-                    style={styles.flexButton}
-                  />
-                  <Button
-                    label="Cancel"
-                    onPress={() => setIsEditingName(false)}
-                    variant="secondary"
-                    style={styles.flexButton}
-                  />
-                </View>
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => setIsEditingName(true)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.settingRowContent}>
-                  <Text style={styles.settingLabel}>Display Name</Text>
-                  <Text style={styles.settingSubValue}>
-                    {displayNameValue || 'Tap to set'}
-                  </Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={[styles.card, styles.resetCard]}>
-            <TouchableOpacity
-              style={styles.settingRow}
-              onPress={handleResetPassword}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Reset Password"
-            >
-              <View style={styles.settingRowContent}>
-                <Text style={styles.settingLabel}>Reset Password</Text>
-                <Text style={styles.settingSubValue}>Send a reset link to {user.email}</Text>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ── LOGOUT ──────────────────────────────────────── */}
-          <View style={styles.logoutSection}>
-            <Button label="Log Out" onPress={handleLogout} variant="secondary" />
           </View>
         </ScrollView>
-        </KeyboardAvoidingView>
       </Animated.View>
     </SafeAreaView>
   );
@@ -460,10 +260,23 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       backgroundColor: theme.background,
     },
 
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+    },
+    headerSpacer: { flex: 1 },
+    settingsBtn: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
     // Header
     header: {
       alignItems: 'center',
-      paddingVertical: spacing.xl,
+      paddingBottom: spacing.xl,
     },
     avatarCircle: {
       width: 72,
@@ -491,10 +304,16 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       color: theme.secondaryText,
       textAlign: 'center',
     },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
     familyCodeRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: spacing.sm,
+      marginTop: spacing.md,
       flexWrap: 'wrap',
       justifyContent: 'center',
     },
@@ -519,7 +338,6 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       color: theme.secondaryText,
       textTransform: 'uppercase',
       letterSpacing: 0.9,
-      marginTop: spacing.lg,
       marginBottom: spacing.sm,
       marginLeft: spacing.xs,
     },
@@ -583,78 +401,12 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       fontWeight: '700',
     },
 
-    // Setting rows
-    settingRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: spacing.md + 2,
-      paddingHorizontal: spacing.lg,
-    },
-    settingRowContent: { flex: 1 },
-    settingLabel: {
-      fontSize: typography.body.fontSize + 1,
-      fontWeight: '500',
-      color: theme.text,
-    },
-    settingSubValue: {
-      marginTop: 2,
-      fontSize: typography.small.fontSize,
-      color: theme.secondaryText,
-    },
-    chevron: {
-      fontSize: 20,
-      color: theme.secondaryText,
-      marginLeft: spacing.sm,
-    },
-
-    // Edit name block
-    editBlock: {
-      padding: spacing.lg,
-      gap: spacing.sm,
-    },
-    editActions: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginTop: spacing.xs,
-    },
-    flexButton: { flex: 1 },
-
-    resetCard: { marginTop: spacing.md },
-
-    // Logout
-    logoutSection: { marginTop: spacing.xl },
-
     emptyText: {
       paddingVertical: spacing.lg,
       paddingHorizontal: spacing.lg,
       fontSize: typography.body.fontSize,
       color: theme.secondaryText,
       textAlign: 'center',
-    },
-    leaveRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.border,
-      ...(Platform.OS === 'web'
-        ? { position: 'relative', zIndex: 2, elevation: 2, cursor: 'pointer' }
-        : {}),
-    },
-    leaveRowBordered: {
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.border,
-    },
-    leaveLabel: {
-      fontSize: typography.body.fontSize + 1,
-      fontWeight: '600',
-    },
-    error: {
-      color: theme.error,
-      fontSize: typography.body.fontSize,
     },
   })
 );

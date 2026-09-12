@@ -10,15 +10,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
-import { spacing } from '../src/theme';
+import { HERO_DARK, HERO_SHAPE } from '../src/authHeroTheme';
+import { createThemedStyles, spacing } from '../src/theme';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
-
-const DARK = '#111111';
-const SHAPE = '#1E1E1E';
 
 const SHAPES = [
   { top: -8, left: 20, w: 32, h: 32, r: '22deg' },
@@ -38,6 +37,8 @@ const SHAPES = [
 ];
 
 export default function SignupScreen({ navigation }) {
+  const styles = useStyles();
+  const headerHeight = useHeaderHeight();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -89,7 +90,8 @@ export default function SignupScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         style={styles.kav}
       >
         <View style={styles.header}>
@@ -108,7 +110,7 @@ export default function SignupScreen({ navigation }) {
               ]}
             />
           ))}
-          <Text style={styles.headerLabel}>Signup</Text>
+          <Text style={styles.headerLabel}>Join HomeHub</Text>
           <View style={styles.logoBox}>
             <Image
               source={require('../assets/icon.png')}
@@ -124,7 +126,7 @@ export default function SignupScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.title}>Create your account</Text>
 
           <View style={styles.fields}>
             <Input
@@ -202,104 +204,106 @@ export default function SignupScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: DARK,
-  },
-  kav: {
-    flex: 1,
-  },
-  header: {
-    height: 210,
-    backgroundColor: DARK,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    gap: 12,
-  },
-  shape: {
-    position: 'absolute',
-    backgroundColor: SHAPE,
-    borderRadius: 5,
-  },
-  headerLabel: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-  },
-  logoBox: {
-    width: 56,
-    height: 56,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-  },
-  logoImg: {
-    width: 38,
-    height: 38,
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  sheetContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 32,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#0F0F0F',
-    letterSpacing: -0.5,
-    marginBottom: 24,
-  },
-  fields: {
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  error: {
-    color: '#DC2626',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  btnOverride: {
-    backgroundColor: '#111111',
-    borderRadius: 14,
-    minHeight: 54,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  btnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  linkRow: {
-    marginTop: spacing.lg,
-    alignItems: 'center',
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  linkHighlight: {
-    color: '#111111',
-    fontWeight: '700',
-  },
-});
+const useStyles = createThemedStyles(({ theme }) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: HERO_DARK,
+    },
+    kav: {
+      flex: 1,
+    },
+    header: {
+      height: 210,
+      backgroundColor: HERO_DARK,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      gap: 12,
+    },
+    shape: {
+      position: 'absolute',
+      backgroundColor: HERO_SHAPE,
+      borderRadius: 5,
+    },
+    headerLabel: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.3,
+    },
+    logoBox: {
+      width: 56,
+      height: 56,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.4,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 8,
+    },
+    logoImg: {
+      width: 38,
+      height: 38,
+    },
+    sheet: {
+      flex: 1,
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+    },
+    sheetContent: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: 32,
+      paddingBottom: 40,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: theme.text,
+      letterSpacing: -0.5,
+      marginBottom: 24,
+    },
+    fields: {
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    error: {
+      color: theme.error,
+      fontSize: 13,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    btnOverride: {
+      backgroundColor: theme.primary,
+      borderRadius: 14,
+      minHeight: 54,
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    btnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+    },
+    linkRow: {
+      marginTop: spacing.lg,
+      alignItems: 'center',
+    },
+    linkText: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      textAlign: 'center',
+    },
+    linkHighlight: {
+      color: theme.primary,
+      fontWeight: '700',
+    },
+  })
+);

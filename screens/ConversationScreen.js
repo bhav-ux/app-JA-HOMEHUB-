@@ -2,7 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -25,12 +27,16 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import {
   deleteConversationMessage,
-  leaveGroup,
+  sendConversationDocument,
+  sendConversationImage,
+  sendConversationLocation,
   sendConversationText,
+  sendConversationVideo,
   sendConversationVoice,
   subscribeToConversation,
 } from '../services/chatService';
 import MessageBubble from '../src/components/MessageBubble';
+import ShareSheet from '../src/components/chat/ShareSheet';
 import { createThemedStyles, spacing, typography, useAppTheme } from '../src/theme';
 import { showAlert, showConfirm } from '../utils/dialogs';
 import { listenToUserDisplayName } from '../utils/user';
@@ -72,6 +78,17 @@ function getInitials(name) {
 const formatDuration = (s) => {
   const n = Math.max(0, Math.floor(s || 0));
   return `${Math.floor(n / 60)}:${(n % 60).toString().padStart(2, '0')}`;
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const openExternal = (url) => {
+  if (!url) return;
+  Linking.openURL(url).catch(() => showAlert('Could not open', 'This link could not be opened.'));
 };
 
 const getMessageTime = (message) => {
@@ -162,6 +179,8 @@ export default function ConversationScreen({ navigation, route }) {
   const [nameMap, setNameMap] = useState({});
   const [sending, setSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadingVoice, setUploadingVoice] = useState(false);
   const [recording, setRecording] = useState(null);
@@ -178,31 +197,8 @@ export default function ConversationScreen({ navigation, route }) {
   // ── Group info handler (defined first so useLayoutEffect can reference it) ──
   const handleGroupInfo = useCallback(() => {
     if (type !== 'group') return;
-    const memberNames = (members || []).map((uid) => nameMap[uid] || uid).join(', ');
-    showAlert(
-      name || 'Group Info',
-      `Members: ${memberNames || 'None'}`,
-      [
-        {
-          text: 'Leave Group',
-          style: 'destructive',
-          onPress: () =>
-            showConfirm('Leave Group', 'Are you sure you want to leave this group?', {
-              confirmText: 'Leave',
-              onConfirm: async () => {
-                try {
-                  await leaveGroup(familyId, chatId, currentUser?.uid);
-                  navigation.goBack();
-                } catch {
-                  showAlert('Error', 'Could not leave the group. Please try again.');
-                }
-              },
-            }),
-        },
-        { text: 'Close', style: 'cancel' },
-      ]
-    );
-  }, [type, members, nameMap, name, familyId, chatId, currentUser?.uid, navigation]);
+    navigation.navigate('GroupInfo', { chat });
+  }, [type, navigation, chat]);
 
   // ── Navigation header ────────────────────────────────────────────────────
   useLayoutEffect(() => {
@@ -300,6 +296,46 @@ export default function ConversationScreen({ navigation, route }) {
     } catch { showAlert('Send failed', 'Could not send your message.'); }
     finally { setSending(false); }
   };
+
+  const handlePhotoPicked = useCallback(async (uri) => {
+    if (!currentUser?.uid || !familyId || uploadingMedia) return;
+    setUploadingMedia(true);
+    try {
+      await sendConversationImage(chat, currentUser.uid, currentUser.email || null, uri);
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+    } catch { showAlert('Send failed', 'Could not send this photo.'); }
+    finally { setUploadingMedia(false); }
+  }, [chat, currentUser, familyId, uploadingMedia]);
+
+  const handleVideoPicked = useCallback(async (uri) => {
+    if (!currentUser?.uid || !familyId || uploadingMedia) return;
+    setUploadingMedia(true);
+    try {
+      await sendConversationVideo(chat, currentUser.uid, currentUser.email || null, uri);
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+    } catch { showAlert('Send failed', 'Could not send this video.'); }
+    finally { setUploadingMedia(false); }
+  }, [chat, currentUser, familyId, uploadingMedia]);
+
+  const handleDocumentPicked = useCallback(async ({ uri, name }) => {
+    if (!currentUser?.uid || !familyId || uploadingMedia) return;
+    setUploadingMedia(true);
+    try {
+      await sendConversationDocument(chat, currentUser.uid, currentUser.email || null, uri, name);
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+    } catch { showAlert('Send failed', 'Could not send this document.'); }
+    finally { setUploadingMedia(false); }
+  }, [chat, currentUser, familyId, uploadingMedia]);
+
+  const handleLocationPicked = useCallback(async ({ latitude, longitude }) => {
+    if (!currentUser?.uid || !familyId || uploadingMedia) return;
+    setUploadingMedia(true);
+    try {
+      await sendConversationLocation(chat, currentUser.uid, currentUser.email || null, { latitude, longitude });
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+    } catch { showAlert('Send failed', 'Could not share your location.'); }
+    finally { setUploadingMedia(false); }
+  }, [chat, currentUser, familyId, uploadingMedia]);
 
   const startVoiceRecording = useCallback(async () => {
     if (!currentUser?.uid || !familyId || isRecording || uploadingVoice) return;
@@ -403,6 +439,65 @@ export default function ConversationScreen({ navigation, route }) {
         </View>
       );
     }
+    if (item.type === 'image') {
+      return (
+        <TouchableOpacity activeOpacity={0.9} onPress={() => openExternal(item.mediaUrl)}>
+          <MessageBubble isSender={isSender} style={styles.mediaBubble}>
+            <Image source={{ uri: item.mediaUrl }} style={styles.mediaImage} />
+          </MessageBubble>
+        </TouchableOpacity>
+      );
+    }
+    if (item.type === 'video') {
+      return (
+        <TouchableOpacity activeOpacity={0.85} onPress={() => openExternal(item.mediaUrl)}>
+          <MessageBubble isSender={isSender} style={styles.mediaBubble}>
+            <View style={styles.videoThumb}>
+              <View style={styles.playCircle}>
+                <Ionicons name="play" size={20} color="#fff" />
+              </View>
+            </View>
+          </MessageBubble>
+        </TouchableOpacity>
+      );
+    }
+    if (item.type === 'document') {
+      return (
+        <TouchableOpacity activeOpacity={0.85} onPress={() => openExternal(item.mediaUrl)}>
+          <MessageBubble isSender={isSender} style={[styles.fileBubble, !isSender && styles.receivedBubbleOverride]}>
+            <View style={styles.fileIconCircle}>
+              <Ionicons name="document-text" size={18} color={isSender ? '#fff' : CHAT_GREEN} />
+            </View>
+            <View style={styles.fileMeta}>
+              <Text style={[styles.fileName, isSender ? styles.textSent : styles.textReceived]} numberOfLines={1}>
+                {item.fileName || 'Document'}
+              </Text>
+              {item.fileSize ? (
+                <Text style={[styles.fileSize, isSender && styles.fileSizeSent]}>{formatFileSize(item.fileSize)}</Text>
+              ) : null}
+            </View>
+          </MessageBubble>
+        </TouchableOpacity>
+      );
+    }
+    if (item.type === 'location') {
+      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`;
+      return (
+        <TouchableOpacity activeOpacity={0.85} onPress={() => openExternal(mapUrl)}>
+          <MessageBubble isSender={isSender} style={[styles.fileBubble, !isSender && styles.receivedBubbleOverride]}>
+            <View style={styles.fileIconCircle}>
+              <Ionicons name="location" size={18} color={isSender ? '#fff' : CHAT_GREEN} />
+            </View>
+            <View style={styles.fileMeta}>
+              <Text style={[styles.fileName, isSender ? styles.textSent : styles.textReceived]}>
+                {item.locationLabel || 'Shared location'}
+              </Text>
+              <Text style={[styles.fileSize, isSender && styles.fileSizeSent]}>Tap to view on map</Text>
+            </View>
+          </MessageBubble>
+        </TouchableOpacity>
+      );
+    }
     return (
       <MessageBubble isSender={isSender} style={isSender ? styles.sentBubbleOverride : styles.receivedBubbleOverride}>
         <Text style={[styles.messageText, isSender ? styles.textSent : styles.textReceived]}>{item.text}</Text>
@@ -473,8 +568,9 @@ export default function ConversationScreen({ navigation, route }) {
   const recordingHint = useMemo(() => {
     if (uploadingVoice) return 'Uploading voice...';
     if (isRecording) return '● Recording... release to send';
+    if (uploadingMedia) return 'Sending...';
     return '';
-  }, [isRecording, uploadingVoice]);
+  }, [isRecording, uploadingVoice, uploadingMedia]);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -517,6 +613,14 @@ export default function ConversationScreen({ navigation, route }) {
 
         {/* ── Input bar ── */}
         <View style={[styles.inputBar, { paddingBottom: spacing.sm + Math.max(insets.bottom, 0) }]}>
+          <TouchableOpacity
+            style={styles.inputIconBtn}
+            onPress={() => setShowShareSheet(true)}
+            disabled={uploadingMedia}
+          >
+            <Ionicons name="add-circle-outline" size={24} color={theme.secondaryText} />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.inputIconBtn} onPress={() => setShowEmojiPicker((p) => !p)}>
             <Ionicons name="happy-outline" size={22} color={theme.secondaryText} />
           </TouchableOpacity>
@@ -578,6 +682,16 @@ export default function ConversationScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* ── Share sheet ── */}
+      <ShareSheet
+        visible={showShareSheet}
+        onClose={() => setShowShareSheet(false)}
+        onPhotoPicked={handlePhotoPicked}
+        onVideoPicked={handleVideoPicked}
+        onDocumentPicked={handleDocumentPicked}
+        onLocationPicked={handleLocationPicked}
+      />
     </SafeAreaView>
   );
 }
@@ -635,6 +749,47 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
 
     messageText: { fontSize: 15, lineHeight: 21 },
     textSent: { color: '#fff' },
+
+    // ── Media bubbles ──
+    mediaBubble: { padding: 4, overflow: 'hidden' },
+    mediaImage: { width: 210, height: 210, borderRadius: 14, backgroundColor: theme.inputBackground },
+    videoThumb: {
+      width: 210,
+      height: 150,
+      borderRadius: 14,
+      backgroundColor: '#0F172A',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    fileBubble: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minWidth: 0,
+      maxWidth: 240,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.md,
+    },
+    fileIconCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: 'rgba(255,255,255,0.22)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.sm,
+    },
+    fileMeta: { flex: 1, minWidth: 0 },
+    fileName: { fontSize: 14, fontWeight: '600' },
+    fileSize: { fontSize: 11, color: theme.secondaryText, marginTop: 2 },
+    fileSizeSent: { color: 'rgba(255,255,255,0.75)' },
     textReceived: { color: theme.text },
 
     timeLabel: { marginTop: 4, fontSize: 10, color: theme.secondaryText },

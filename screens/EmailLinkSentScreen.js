@@ -9,9 +9,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../src/components/Button';
-import { spacing } from '../src/theme';
+import { HERO_DARK, HERO_SHAPE } from '../src/authHeroTheme';
+import { createThemedStyles, spacing } from '../src/theme';
 import { showAlert } from '../utils/dialogs';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import {
@@ -19,9 +21,6 @@ import {
   openEmailApp,
   resendPendingHomeHubEmailLink,
 } from '../utils/emailLinkAuth';
-
-const DARK = '#111111';
-const SHAPE = '#1E1E1E';
 
 const SHAPES = [
   { top: -8, left: 18, w: 28, h: 28, r: '14deg' },
@@ -34,6 +33,8 @@ const SHAPES = [
 ];
 
 export default function EmailLinkSentScreen({ navigation, route }) {
+  const styles = useStyles();
+  const headerHeight = useHeaderHeight();
   const [email, setEmail] = useState(route.params?.email || '');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
@@ -88,7 +89,8 @@ export default function EmailLinkSentScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         style={styles.kav}
       >
         <View style={styles.header}>
@@ -165,129 +167,131 @@ export default function EmailLinkSentScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: DARK,
-  },
-  kav: {
-    flex: 1,
-  },
-  header: {
-    height: 200,
-    backgroundColor: DARK,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  shape: {
-    position: 'absolute',
-    backgroundColor: SHAPE,
-    borderRadius: 5,
-  },
-  iconShell: {
-    width: 86,
-    height: 86,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1F2937',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  sheetContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 32,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#0F0F0F',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  emailCard: {
-    marginTop: spacing.lg,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  emailLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  emailValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  tipCard: {
-    marginTop: spacing.md,
-    borderRadius: 20,
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  tipTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1D4ED8',
-    marginBottom: 6,
-  },
-  tipBody: {
-    fontSize: 13,
-    color: '#1E40AF',
-    lineHeight: 19,
-  },
-  success: {
-    marginTop: spacing.md,
-    fontSize: 13,
-    color: '#047857',
-    textAlign: 'center',
-  },
-  actions: {
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  primaryButton: {
-    backgroundColor: '#111111',
-    borderRadius: 14,
-    minHeight: 54,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    minHeight: 54,
-    borderRadius: 14,
-  },
-  changeEmailRow: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  changeEmailText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111111',
-  },
-});
+const useStyles = createThemedStyles(({ theme }) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: HERO_DARK,
+    },
+    kav: {
+      flex: 1,
+    },
+    header: {
+      height: 200,
+      backgroundColor: HERO_DARK,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    shape: {
+      position: 'absolute',
+      backgroundColor: HERO_SHAPE,
+      borderRadius: 5,
+    },
+    iconShell: {
+      width: 86,
+      height: 86,
+      borderRadius: 26,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#2A2E24',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+    },
+    sheet: {
+      flex: 1,
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+    },
+    sheetContent: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: 32,
+      paddingBottom: 40,
+    },
+    title: {
+      fontSize: 30,
+      fontWeight: '800',
+      color: theme.text,
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      marginTop: 6,
+      lineHeight: 20,
+    },
+    emailCard: {
+      marginTop: spacing.lg,
+      borderRadius: 20,
+      backgroundColor: theme.inputBackground,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+    },
+    emailLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      color: theme.secondaryText,
+      marginBottom: 6,
+    },
+    emailValue: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    tipCard: {
+      marginTop: spacing.md,
+      borderRadius: 20,
+      backgroundColor: theme.primaryLight,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+    },
+    tipTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.primary,
+      marginBottom: 6,
+    },
+    tipBody: {
+      fontSize: 13,
+      color: theme.text,
+      lineHeight: 19,
+    },
+    success: {
+      marginTop: spacing.md,
+      fontSize: 13,
+      color: theme.success,
+      textAlign: 'center',
+    },
+    actions: {
+      marginTop: spacing.xl,
+      gap: spacing.md,
+    },
+    primaryButton: {
+      backgroundColor: theme.primary,
+      borderRadius: 14,
+      minHeight: 54,
+    },
+    primaryButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    secondaryButton: {
+      minHeight: 54,
+      borderRadius: 14,
+    },
+    changeEmailRow: {
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    changeEmailText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.primary,
+    },
+  })
+);

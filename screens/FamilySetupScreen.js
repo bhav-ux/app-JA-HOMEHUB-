@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { arrayUnion, collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
@@ -11,6 +12,7 @@ import { createThemedStyles, spacing, typography } from '../src/theme';
 export default function FamilySetupScreen({ navigation }) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const [familyCode, setFamilyCode] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,12 +96,17 @@ export default function FamilySetupScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <KeyboardAvoidingView style={styles.safeArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.safeArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      >
         <ScrollView
           contentContainerStyle={[styles.container, { paddingBottom: spacing.lg + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Join or Create a Family</Text>
+          <Text style={styles.title}>Set up your family</Text>
+          <Text style={styles.subtitle}>Create a new family group, or join one with a code.</Text>
           <View style={styles.card}>
             <Input
               label="Family Code"
@@ -137,10 +144,17 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       backgroundColor: theme.background,
     },
     title: {
-      ...typography.title,
+      ...typography.display,
+      fontSize: 26,
       textAlign: 'center',
-      marginBottom: spacing.lg,
       color: theme.text,
+    },
+    subtitle: {
+      fontSize: typography.body.fontSize + 1,
+      textAlign: 'center',
+      color: theme.secondaryText,
+      marginTop: spacing.xs,
+      marginBottom: spacing.lg,
     },
     card: {
       backgroundColor: theme.card,

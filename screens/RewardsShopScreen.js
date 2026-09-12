@@ -34,6 +34,23 @@ function formatDate(value) {
   return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
 }
 
+function RedemptionRow({ redemption, member, isLast, styles, trailing }) {
+  return (
+    <View style={[styles.redemptionRow, !isLast && styles.rowDivider]}>
+      <View style={styles.redemptionIconCircle}>
+        <Ionicons name={redemption.rewardIcon || 'gift-outline'} size={18} color={ACCENT.streak} />
+      </View>
+      <View style={styles.redemptionInfo}>
+        <Text style={styles.redemptionTitle} numberOfLines={1}>{redemption.rewardTitle}</Text>
+        <Text style={styles.redemptionMeta}>
+          {member ? `${member.name || 'Member'} · ` : ''}{formatDate(redemption.redeemedAt)}
+        </Text>
+      </View>
+      {trailing}
+    </View>
+  );
+}
+
 export default function RewardsShopScreen({ navigation, route, familyId: familyIdProp }) {
   const { theme, isDark } = useAppTheme();
   const styles = useStyles();
@@ -231,22 +248,14 @@ export default function RewardsShopScreen({ navigation, route, familyId: familyI
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Pending Fulfillment</Text>
                 <View style={styles.listCard}>
-                  {pendingRedemptions.map((redemption, index) => {
-                    const member = membersById.get(redemption.userId);
-                    return (
-                      <View
-                        key={redemption.id}
-                        style={[styles.redemptionRow, index < pendingRedemptions.length - 1 && styles.rowDivider]}
-                      >
-                        <View style={styles.redemptionIconCircle}>
-                          <Ionicons name={redemption.rewardIcon || 'gift-outline'} size={18} color={ACCENT.streak} />
-                        </View>
-                        <View style={styles.redemptionInfo}>
-                          <Text style={styles.redemptionTitle} numberOfLines={1}>{redemption.rewardTitle}</Text>
-                          <Text style={styles.redemptionMeta}>
-                            {member?.name || 'Member'} · {formatDate(redemption.redeemedAt)}
-                          </Text>
-                        </View>
+                  {pendingRedemptions.map((redemption, index) => (
+                    <RedemptionRow
+                      key={redemption.id}
+                      redemption={redemption}
+                      member={membersById.get(redemption.userId)}
+                      isLast={index === pendingRedemptions.length - 1}
+                      styles={styles}
+                      trailing={
                         <AnimatedCard
                           onPress={fulfillingId ? undefined : () => handleFulfill(redemption)}
                           disabled={!!fulfillingId}
@@ -260,9 +269,9 @@ export default function RewardsShopScreen({ navigation, route, familyId: familyI
                             )}
                           </View>
                         </AnimatedCard>
-                      </View>
-                    );
-                  })}
+                      }
+                    />
+                  ))}
                 </View>
               </View>
             ) : null}
@@ -270,27 +279,25 @@ export default function RewardsShopScreen({ navigation, route, familyId: familyI
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>My Redemptions</Text>
               {myRedemptions.length === 0 ? (
-                <Text style={styles.emptyText}>You haven't redeemed anything yet.</Text>
+                <View style={styles.previewCard}>
+                  <Text style={styles.emptyText}>You haven't redeemed anything yet.</Text>
+                </View>
               ) : (
                 <View style={styles.listCard}>
                   {myRedemptions.map((redemption, index) => (
-                    <View
+                    <RedemptionRow
                       key={redemption.id}
-                      style={[styles.redemptionRow, index < myRedemptions.length - 1 && styles.rowDivider]}
-                    >
-                      <View style={styles.redemptionIconCircle}>
-                        <Ionicons name={redemption.rewardIcon || 'gift-outline'} size={18} color={ACCENT.streak} />
-                      </View>
-                      <View style={styles.redemptionInfo}>
-                        <Text style={styles.redemptionTitle} numberOfLines={1}>{redemption.rewardTitle}</Text>
-                        <Text style={styles.redemptionMeta}>{formatDate(redemption.redeemedAt)}</Text>
-                      </View>
-                      <View style={[styles.statusPill, redemption.status === 'fulfilled' ? styles.statusFulfilled : styles.statusPending]}>
-                        <Text style={[styles.statusText, redemption.status === 'fulfilled' ? styles.statusTextFulfilled : styles.statusTextPending]}>
-                          {redemption.status === 'fulfilled' ? 'Fulfilled' : 'Pending'}
-                        </Text>
-                      </View>
-                    </View>
+                      redemption={redemption}
+                      isLast={index === myRedemptions.length - 1}
+                      styles={styles}
+                      trailing={
+                        <View style={[styles.statusPill, redemption.status === 'fulfilled' ? styles.statusFulfilled : styles.statusPending]}>
+                          <Text style={[styles.statusText, redemption.status === 'fulfilled' ? styles.statusTextFulfilled : styles.statusTextPending]}>
+                            {redemption.status === 'fulfilled' ? 'Fulfilled' : 'Pending'}
+                          </Text>
+                        </View>
+                      }
+                    />
                   ))}
                 </View>
               )}
@@ -459,9 +466,17 @@ const useStyles = createThemedStyles(({ theme, shadow, radius }) =>
       fontWeight: '700',
       color: '#FFFFFF',
     },
+    previewCard: {
+      backgroundColor: theme.card,
+      borderRadius: radius.lg,
+      padding: spacing.sm,
+      ...shadow,
+    },
     emptyText: {
       fontSize: 13,
       color: theme.secondaryText,
+      textAlign: 'center',
+      paddingVertical: spacing.md,
     },
     listCard: {
       backgroundColor: theme.card,

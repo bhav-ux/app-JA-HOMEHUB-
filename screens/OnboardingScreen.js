@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors } from '../src/theme';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,8 +66,8 @@ const SLIDES = [
   },
   {
     key: 'setup',
-    bg:     '#08101F',
-    accent: '#7B96FF',
+    bg:     '#0C160F',
+    accent: colors.primary,
     icon:   'people',
     title:  "Let's Set Up\nYour Family",
     body:   'Create a new family group or join an existing one to get started.',
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
 
   // ── Card ──
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     // Prevent card from being too tall on large screens
@@ -393,14 +394,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '800',
-    color: '#0F172A',
+    color: colors.textPrimary,
     letterSpacing: -0.6,
     lineHeight: 37,
     marginBottom: 10,
   },
   body: {
     fontSize: 15,
-    color: '#64748B',
+    color: colors.textSecondary,
     lineHeight: 23,
     marginBottom: 22,
   },
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
   },
   dot: { borderRadius: 9999 },
   dotActive:   { width: 24, height: 7 },
-  dotInactive: { width: 7,  height: 7, backgroundColor: '#E2E8F0' },
+  dotInactive: { width: 7,  height: 7, backgroundColor: colors.border },
 
   // ── Continue button ──
   continueBtn: {
@@ -489,13 +490,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   secondaryBtnSub: {
-    color: '#94A3B8',
+    color: colors.textSecondary,
     fontSize: 12,
     marginTop: 1,
   },
   finalNote: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 2,
   },

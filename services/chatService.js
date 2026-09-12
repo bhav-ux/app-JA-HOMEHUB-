@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { uploadVoiceMessage } from './storageService';
+import { uploadFile } from '../utils/uploadImage';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -32,6 +33,12 @@ function normalizeMessage(messageDoc, familyId) {
     text: data.text || '',
     audioUrl: data.audioUrl || '',
     duration: data.duration || 0,
+    mediaUrl: data.mediaUrl || '',
+    fileName: data.fileName || '',
+    fileSize: data.fileSize || 0,
+    latitude: typeof data.latitude === 'number' ? data.latitude : null,
+    longitude: typeof data.longitude === 'number' ? data.longitude : null,
+    locationLabel: data.locationLabel || '',
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null,
   };
 }
@@ -378,6 +385,82 @@ export async function sendConversationVoice(chat, senderId, email, localUri, dur
   const docRef = await addDoc(messagesRef, payload);
   await updateChatPreview(chat, '🎤 Voice message', senderId);
   return { id: docRef.id, storagePath, ...payload };
+}
+
+async function sendConversationMedia(chat, senderId, email, { type, localUri, fileName, fallbackContentType, previewText }) {
+  if (!localUri) throw new Error('File is required');
+  if (!senderId) throw new Error('Sender ID is required');
+
+  const chatId = chat.chatId || chat.familyId;
+  const ext = fileName?.includes('.') ? fileName.split('.').pop() : (type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'dat');
+  const storagePath = `chatMedia/${chatId}/${Date.now()}.${ext}`;
+  const { downloadURL, size } = await uploadFile(localUri, storagePath, fallbackContentType);
+
+  const messagesRef = getMessagesRef(chat);
+  const payload = {
+    chatId,
+    senderId,
+    type,
+    mediaUrl: downloadURL,
+    fileName: fileName || '',
+    fileSize: size,
+    createdAt: serverTimestamp(),
+    email: email || null,
+  };
+  const docRef = await addDoc(messagesRef, payload);
+  await updateChatPreview(chat, previewText, senderId);
+  return { id: docRef.id, ...payload };
+}
+
+export async function sendConversationImage(chat, senderId, email, localUri) {
+  return sendConversationMedia(chat, senderId, email, {
+    type: 'image',
+    localUri,
+    fallbackContentType: 'image/jpeg',
+    previewText: '📷 Photo',
+  });
+}
+
+export async function sendConversationVideo(chat, senderId, email, localUri) {
+  return sendConversationMedia(chat, senderId, email, {
+    type: 'video',
+    localUri,
+    fallbackContentType: 'video/mp4',
+    previewText: '🎥 Video',
+  });
+}
+
+export async function sendConversationDocument(chat, senderId, email, localUri, fileName) {
+  return sendConversationMedia(chat, senderId, email, {
+    type: 'document',
+    localUri,
+    fileName,
+    fallbackContentType: 'application/octet-stream',
+    previewText: `📄 ${fileName || 'Document'}`,
+  });
+}
+
+export async function sendConversationLocation(chat, senderId, email, { latitude, longitude, label }) {
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    throw new Error('A valid location is required');
+  }
+  if (!senderId) throw new Error('Sender ID is required');
+
+  const chatId = chat.chatId || chat.familyId;
+  const messagesRef = getMessagesRef(chat);
+  const payload = {
+    chatId,
+    senderId,
+    type: 'location',
+    latitude,
+    longitude,
+    locationLabel: label || '',
+    createdAt: serverTimestamp(),
+    email: email || null,
+  };
+  const docRef = await addDoc(messagesRef, payload);
+  await updateChatPreview(chat, '📍 Location', senderId);
+  return { id: docRef.id, ...payload };
 }
 
 export async function deleteConversationMessage(chat, messageId) {

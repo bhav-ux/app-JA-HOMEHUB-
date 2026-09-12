@@ -11,12 +11,17 @@ export const colors = {
   textSecondary: lightTheme.secondaryText,
   border: lightTheme.border,
   error: lightTheme.error,
+  success: lightTheme.success,
+  warning: lightTheme.warning,
 };
 
 export const radius = {
+  xs: 6,
   sm: 8,
   md: 12,
   lg: 18,
+  xl: 24,
+  full: 999,
 };
 
 export const spacing = {
@@ -29,10 +34,12 @@ export const spacing = {
 };
 
 export const typography = {
-  title: { fontSize: 24, fontWeight: '700' },
+  display: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.3 },
   heading: { fontSize: 18, fontWeight: '600' },
   body: { fontSize: 14 },
   small: { fontSize: 12 },
+  caption: { fontSize: 11, fontWeight: '500' },
 };
 
 export function getShadow(theme) {

@@ -1,9 +1,13 @@
 import Svg, { Line } from 'react-native-svg';
 
+// Connector line colors. `parentChild` and `secondary` echo the app's current
+// primary/secondaryText theme values (kept as static rgba here since this SVG
+// layer draws outside the themed-styles system); `spouse` is a deliberate
+// warm accent, distinct from both, matching the rewards ACCENT palette's style.
 const COLORS = {
-  parentChild: 'rgba(74, 108, 247, 0.35)',
+  parentChild: 'rgba(46, 107, 79, 0.35)',
   spouse: 'rgba(214, 130, 110, 0.55)',
-  secondary: 'rgba(139, 147, 168, 0.4)',
+  secondary: 'rgba(140, 144, 134, 0.4)',
 };
 
 export default function TreeConnectors({ connectors, width, height, color }) {

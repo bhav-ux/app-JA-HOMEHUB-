@@ -20,6 +20,7 @@ import CalendarScreen from './screens/CalendarScreen';
 import AlbumsScreen from './screens/AlbumsScreen';
 import ChatsHomeScreen from './screens/ChatsHomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import SettingsScreen from './screens/SettingsScreen';
 import AddEventScreen from './screens/AddEventScreen';
 import AddCalendarNoteScreen from './screens/AddCalendarNoteScreen';
 import CreateAlbumScreen from './screens/CreateAlbumScreen';
@@ -29,6 +30,8 @@ import FamilySetupScreen from './screens/FamilySetupScreen';
 import FamilyManagementScreen from './screens/FamilyManagementScreen';
 import HomeDashboardScreen from './screens/HomeDashboardScreen';
 import FamilyTreeScreen from './screens/FamilyTreeScreen';
+import TimelineScreen from './screens/TimelineScreen';
+import GroupInfoScreen from './screens/GroupInfoScreen';
 import RewardsHomeScreen from './screens/RewardsHomeScreen';
 import RewardsLeaderboardScreen from './screens/RewardsLeaderboardScreen';
 import RewardsShopScreen from './screens/RewardsShopScreen';
@@ -307,6 +310,9 @@ function AppNavigator() {
         <Stack.Screen name="FamilyTree" options={{ headerShown: false }}>
           {(props) => <FamilyTreeScreen {...props} familyId={familyId} />}
         </Stack.Screen>
+        <Stack.Screen name="Timeline" options={{ headerShown: false }}>
+          {(props) => <TimelineScreen {...props} familyId={familyId} />}
+        </Stack.Screen>
         <Stack.Screen name="RewardsHome" options={{ headerShown: false }}>
           {(props) => <RewardsHomeScreen {...props} familyId={familyId} />}
         </Stack.Screen>
@@ -341,6 +347,16 @@ function AppNavigator() {
           name="NewChat"
           component={NewChatScreen}
           options={{ title: 'New Chat', headerTitleAlign: 'center' }}
+        />
+        <Stack.Screen
+          name="GroupInfo"
+          component={GroupInfoScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

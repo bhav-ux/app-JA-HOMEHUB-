@@ -16,11 +16,9 @@ import { auth } from '../firebaseConfig';
 import { useGoogleSignIn } from '../hooks/useGoogleSignIn';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
-import { spacing } from '../src/theme';
+import { HERO_DARK, HERO_SHAPE } from '../src/authHeroTheme';
+import { createThemedStyles, spacing, useAppTheme } from '../src/theme';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
-
-const DARK = '#111111';
-const SHAPE = '#1E1E1E';
 
 const SHAPES = [
   { top: -10, left: 8, w: 38, h: 38, r: '18deg' },
@@ -40,6 +38,8 @@ const SHAPES = [
 ];
 
 export default function LoginScreen({ navigation }) {
+  const styles = useStyles();
+  const { theme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.kav}
       >
         <View style={styles.header}>
@@ -117,7 +117,7 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Login</Text>
+          <Text style={styles.title}>Welcome back</Text>
 
           <TouchableOpacity
             style={[styles.googleBtn, authBusy && styles.googleBtnDisabled]}
@@ -126,7 +126,7 @@ export default function LoginScreen({ navigation }) {
             disabled={authBusy || !isGoogleConfigured}
           >
             {googleLoading ? (
-              <ActivityIndicator color="#111827" />
+              <ActivityIndicator color={theme.text} />
             ) : (
               <Text style={styles.googleText}>Continue with Google</Text>
             )}
@@ -197,148 +197,150 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: DARK,
-  },
-  kav: {
-    flex: 1,
-  },
-  header: {
-    height: 230,
-    backgroundColor: DARK,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    gap: 10,
-  },
-  shape: {
-    position: 'absolute',
-    backgroundColor: SHAPE,
-    borderRadius: 5,
-  },
-  logoBox: {
-    width: 76,
-    height: 76,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 10,
-  },
-  logoImg: {
-    width: 50,
-    height: 50,
-  },
-  appName: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 2.5,
-    color: 'rgba(255,255,255,0.45)',
-    textTransform: 'uppercase',
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  sheetContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 32,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#0F0F0F',
-    letterSpacing: -0.5,
-    marginBottom: 24,
-  },
-  googleBtn: {
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 20,
-  },
-  googleBtnDisabled: {
-    opacity: 0.65,
-  },
-  googleText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerLabel: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  fields: {
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  error: {
-    color: '#DC2626',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  btnOverride: {
-    backgroundColor: '#111111',
-    borderRadius: 14,
-    minHeight: 54,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  btnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  forgotRow: {
-    marginTop: spacing.md,
-    alignItems: 'center',
-  },
-  forgotText: {
-    fontSize: 13,
-    color: '#2563EB',
-    fontWeight: '600',
-  },
-  linkRow: {
-    marginTop: spacing.lg,
-    alignItems: 'center',
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  linkHighlight: {
-    color: '#111111',
-    fontWeight: '700',
-  },
-});
+const useStyles = createThemedStyles(({ theme }) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: HERO_DARK,
+    },
+    kav: {
+      flex: 1,
+    },
+    header: {
+      height: 230,
+      backgroundColor: HERO_DARK,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      gap: 10,
+    },
+    shape: {
+      position: 'absolute',
+      backgroundColor: HERO_SHAPE,
+      borderRadius: 5,
+    },
+    logoBox: {
+      width: 76,
+      height: 76,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.45,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 10,
+    },
+    logoImg: {
+      width: 50,
+      height: 50,
+    },
+    appName: {
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 2.5,
+      color: 'rgba(255,255,255,0.45)',
+      textTransform: 'uppercase',
+    },
+    sheet: {
+      flex: 1,
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+    },
+    sheetContent: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: 32,
+      paddingBottom: 40,
+    },
+    title: {
+      fontSize: 30,
+      fontWeight: '800',
+      color: theme.text,
+      letterSpacing: -0.5,
+      marginBottom: 24,
+    },
+    googleBtn: {
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 52,
+      backgroundColor: theme.card,
+      marginBottom: 20,
+    },
+    googleBtnDisabled: {
+      opacity: 0.65,
+    },
+    googleText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    dividerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+      gap: 10,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.border,
+    },
+    dividerLabel: {
+      fontSize: 13,
+      color: theme.secondaryText,
+    },
+    fields: {
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    error: {
+      color: theme.error,
+      fontSize: 13,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    btnOverride: {
+      backgroundColor: theme.primary,
+      borderRadius: 14,
+      minHeight: 54,
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    btnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+    },
+    forgotRow: {
+      marginTop: spacing.md,
+      alignItems: 'center',
+    },
+    forgotText: {
+      fontSize: 13,
+      color: theme.primary,
+      fontWeight: '600',
+    },
+    linkRow: {
+      marginTop: spacing.lg,
+      alignItems: 'center',
+    },
+    linkText: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      textAlign: 'center',
+    },
+    linkHighlight: {
+      color: theme.primary,
+      fontWeight: '700',
+    },
+  })
+);

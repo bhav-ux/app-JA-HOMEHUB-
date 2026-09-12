@@ -9,15 +9,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
-import { spacing } from '../src/theme';
-
-const DARK = '#111111';
-const SHAPE = '#1E1E1E';
+import { HERO_DARK, HERO_SHAPE } from '../src/authHeroTheme';
+import { createThemedStyles, spacing } from '../src/theme';
 
 const SHAPES = [
   { top: -10, left: 8,   w: 38, h: 38, r: '18deg'  },
@@ -37,6 +36,8 @@ const SHAPES = [
 ];
 
 export default function ForgotPasswordScreen({ navigation }) {
+  const styles = useStyles();
+  const headerHeight = useHeaderHeight();
   const [email, setEmail]     = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
@@ -63,7 +64,8 @@ export default function ForgotPasswordScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         style={styles.kav}
       >
         <View style={styles.header}>
@@ -151,87 +153,89 @@ export default function ForgotPasswordScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: DARK,
-  },
-  kav: {
-    flex: 1,
-  },
-  header: {
-    height: 140,
-    backgroundColor: DARK,
-    overflow: 'hidden',
-  },
-  shape: {
-    position: 'absolute',
-    backgroundColor: SHAPE,
-    borderRadius: 5,
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  sheetContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 32,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#0F0F0F',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 6,
-    marginBottom: 28,
-    lineHeight: 20,
-  },
-  emailHighlight: {
-    color: '#0F0F0F',
-    fontWeight: '600',
-  },
-  fields: {
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  error: {
-    color: '#DC2626',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  btnOverride: {
-    backgroundColor: '#111111',
-    borderRadius: 14,
-    minHeight: 54,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  btnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  linkRow: {
-    marginTop: 22,
-    alignItems: 'center',
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  linkHighlight: {
-    color: '#2563EB',
-    fontWeight: '700',
-  },
-});
+const useStyles = createThemedStyles(({ theme }) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: HERO_DARK,
+    },
+    kav: {
+      flex: 1,
+    },
+    header: {
+      height: 140,
+      backgroundColor: HERO_DARK,
+      overflow: 'hidden',
+    },
+    shape: {
+      position: 'absolute',
+      backgroundColor: HERO_SHAPE,
+      borderRadius: 5,
+    },
+    sheet: {
+      flex: 1,
+      backgroundColor: theme.card,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+    },
+    sheetContent: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: 32,
+      paddingBottom: 40,
+    },
+    title: {
+      fontSize: 30,
+      fontWeight: '800',
+      color: theme.text,
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      marginTop: 6,
+      marginBottom: 28,
+      lineHeight: 20,
+    },
+    emailHighlight: {
+      color: theme.text,
+      fontWeight: '600',
+    },
+    fields: {
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    error: {
+      color: theme.error,
+      fontSize: 13,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    btnOverride: {
+      backgroundColor: theme.primary,
+      borderRadius: 14,
+      minHeight: 54,
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    btnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+    },
+    linkRow: {
+      marginTop: 22,
+      alignItems: 'center',
+    },
+    linkText: {
+      fontSize: 14,
+      color: theme.secondaryText,
+    },
+    linkHighlight: {
+      color: theme.primary,
+      fontWeight: '700',
+    },
+  })
+);

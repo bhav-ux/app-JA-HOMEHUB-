@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -25,6 +25,7 @@ import ProgressBar from '../src/components/rewards/ProgressBar';
 import StreakBadge from '../src/components/rewards/StreakBadge';
 import PointsPill from '../src/components/rewards/PointsPill';
 import { ACCENT } from '../src/components/rewards/rewardsTheme';
+import HomeHubSkeleton from '../src/components/ui/HomeHubSkeleton';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -277,7 +278,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
         <Animated.View style={[styles.heroSection, { transform: [{ translateY: slideAnim }] }]}>
           <Text style={styles.greetingText}>
             {greeting},{' '}
-            <Text style={styles.greetingName}>{getDisplayName(user)}</Text>
+            <Text style={styles.greetingName}>{getDisplayName(user)}</Text> 👋
           </Text>
           <Text style={styles.dateText}>{getTodayLabel()}</Text>
         </Animated.View>
@@ -287,8 +288,14 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
           <Text style={styles.sectionChip}>TODAY</Text>
 
           {focusState === 'loading' && (
-            <View style={[styles.focusCard, styles.focusCardLoading]}>
-              <ActivityIndicator size="small" color={`${theme.primary}88`} />
+            <View style={styles.focusCard}>
+              <View style={styles.focusRow}>
+                <HomeHubSkeleton width={36} height={36} borderRadius={10} style={{ marginRight: 12 }} />
+                <View style={styles.focusBody}>
+                  <HomeHubSkeleton width="70%" height={14} />
+                  <HomeHubSkeleton width="40%" height={11} style={{ marginTop: 6 }} />
+                </View>
+              </View>
             </View>
           )}
 
@@ -437,7 +444,12 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
         {/* Recent Activity */}
         {recentActivity.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionChip}>RECENT</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionChip}>RECENT</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Timeline', { familyId })}>
+                <Text style={styles.sectionLink}>View all</Text>
+              </TouchableOpacity>
+            </View>
             <View>
               {recentActivity.map((item, i) => (
                 <AnimatedCard
@@ -520,6 +532,17 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       textTransform: 'uppercase',
       marginBottom: 7,
     },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    sectionLink: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: theme.primary,
+      marginBottom: 7,
+    },
 
     // Today Focus Card
     focusCard: {
@@ -528,11 +551,6 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
       padding: 14,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.border,
-    },
-    focusCardLoading: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 60,
     },
     focusRow: {
       flexDirection: 'row',
