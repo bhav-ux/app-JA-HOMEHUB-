@@ -14,7 +14,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import {
+  RecordingPresets,
+  createAudioPlayer,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from 'expo-audio';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import {
@@ -72,6 +78,7 @@ export default function ChatScreen({ navigation }) {
   const listRef = useRef(null);
   const nameListeners = useRef({});
   const soundRef = useRef(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -117,7 +124,7 @@ export default function ChatScreen({ navigation }) {
     return () => {
       Object.values(nameListeners.current).forEach((unsubscribe) => unsubscribe?.());
       nameListeners.current = {};
-      soundRef.current?.unloadAsync?.();
+      soundRef.current?.remove?.();
     };
   }, []);
 
@@ -156,8 +163,8 @@ export default function ChatScreen({ navigation }) {
   const stopCurrentAudio = useCallback(async () => {
     if (soundRef.current) {
       try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
+        soundRef.current.pause();
+        soundRef.current.remove();
       } catch (error) {
         console.error('Audio stop failed', error);
       } finally {
@@ -197,21 +204,22 @@ export default function ChatScreen({ navigation }) {
     if (!userId || !familyId || isRecording || uploadingVoice) return;
 
     try {
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
         Alert.alert('Microphone access needed', 'Please allow microphone permission to send voice messages.');
         return;
       }
 
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const recordingResult = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setRecording(recordingResult.recording);
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      setRecording(true);
       setRecordingStartedAt(Date.now());
       setIsRecording(true);
     } catch (error) {
       Alert.alert('Recording error', 'Could not start recording. Try again.');
     }
-  }, [familyId, isRecording, uploadingVoice]);
+  }, [familyId, isRecording, uploadingVoice, recorder]);
 
   const stopVoiceRecording = useCallback(async () => {
     if (!recording || !familyId || !auth.currentUser?.uid) return;
@@ -220,9 +228,9 @@ export default function ChatScreen({ navigation }) {
     let durationMs = 0;
 
     try {
-      await recording.stopAndUnloadAsync();
-      const status = await recording.getStatusAsync();
-      localUri = recording.getURI() || '';
+      await recorder.stop();
+      const status = recorder.getStatus();
+      localUri = recorder.uri || '';
       durationMs = status.durationMillis || Date.now() - (recordingStartedAt || Date.now());
     } catch (error) {
       Alert.alert('Recording error', 'Unable to finish recording.');
@@ -256,44 +264,39 @@ export default function ChatScreen({ navigation }) {
     } finally {
       setUploadingVoice(false);
     }
-  }, [familyId, recording, recordingStartedAt]);
+  }, [familyId, recording, recordingStartedAt, recorder]);
 
   const handlePlayPauseVoice = useCallback(
     async (message) => {
       if (!message?.audioUrl) return;
 
       if (playingMessageId === message.id && soundRef.current) {
-        const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded && status.isPlaying) {
-          await soundRef.current.pauseAsync();
+        if (soundRef.current.playing) {
+          soundRef.current.pause();
           return;
         }
-        if (status.isLoaded && !status.isPlaying) {
-          await soundRef.current.playAsync();
-          return;
-        }
+        soundRef.current.play();
+        return;
       }
 
       await stopCurrentAudio();
       try {
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: message.audioUrl },
-          { shouldPlay: true },
-          (status) => {
-            if (!status.isLoaded) return;
-            setPlaybackMap((prev) => ({
-              ...prev,
-              [message.id]: {
-                positionMillis: status.positionMillis || 0,
-                durationMillis: status.durationMillis || 1,
-                isPlaying: status.isPlaying || false,
-              },
-            }));
-            if (status.didJustFinish) {
-              setPlayingMessageId(null);
-            }
+        const sound = createAudioPlayer({ uri: message.audioUrl });
+        sound.addListener('playbackStatusUpdate', (status) => {
+          if (!status.isLoaded) return;
+          setPlaybackMap((prev) => ({
+            ...prev,
+            [message.id]: {
+              positionMillis: (status.currentTime || 0) * 1000,
+              durationMillis: (status.duration || 1) * 1000,
+              isPlaying: status.playing || false,
+            },
+          }));
+          if (status.didJustFinish) {
+            setPlayingMessageId(null);
           }
-        );
+        });
+        sound.play();
         soundRef.current = sound;
         setPlayingMessageId(message.id);
       } catch (error) {

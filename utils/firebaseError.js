@@ -22,6 +22,8 @@ const FIREBASE_MESSAGES = {
     'Google sign-in is not configured yet. Add your Firebase Web Client ID to the app config.',
   'auth/google-not-ready': 'Google sign-in is still loading. Please try again.',
   'auth/google-sign-in-failed': 'Google sign-in failed. Please try again.',
+  'auth/google-unsupported-in-expo-go':
+    "Google Sign-In isn't available in Expo Go. Please use the HomeHub development build.",
   'auth/unauthorized-continue-uri': 'This sign-in link is not configured correctly.',
   'auth/invalid-continue-uri': 'This sign-in link is not configured correctly.',
   'permission-denied': 'You do not have permission to do this.',

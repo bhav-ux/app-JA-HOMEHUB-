@@ -381,7 +381,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
           >
             <View style={styles.treeCardHeader}>
               <View style={styles.treeCardTitleWrap}>
-                <Text style={styles.treeCardTitle}>🌳 Family Tree</Text>
+                <Text style={styles.treeCardTitle}>Family Tree</Text>
                 <Text style={styles.treeCardSubtitle}>See how everyone is connected</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={`${theme.primary}66`} />
@@ -393,9 +393,9 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
               currentUserId={user?.uid}
             />
 
-            <View style={[styles.treeCardBtn, { backgroundColor: theme.primaryLight }]}>
-              <Text style={[styles.treeCardBtnText, { color: theme.primary }]}>View Full Tree</Text>
-              <Ionicons name="arrow-forward" size={14} color={theme.primary} />
+            <View style={styles.treeCardBtn}>
+              <Text style={[styles.treeCardBtnText, { color: theme.primary }]}>View full tree</Text>
+              <Ionicons name="arrow-forward" size={13} color={theme.primary} />
             </View>
           </AnimatedCard>
         </View>
@@ -414,7 +414,7 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
                 <View style={styles.rewardsLevelRow}>
                   <Text style={styles.rewardsLevelIcon}>{myLevelInfo.icon}</Text>
                   <View>
-                    <Text style={styles.rewardsTitle}>🏆 Family Rewards</Text>
+                    <Text style={styles.rewardsTitle}>Family Rewards</Text>
                     <Text style={styles.rewardsSubtitle}>Lv {myLevelInfo.level} · {myLevelInfo.title}</Text>
                   </View>
                 </View>
@@ -422,13 +422,13 @@ export default function HomeDashboardScreen({ navigation, route, familyId: famil
               <PointsPill points={myRewardsStats.balance || 0} />
             </View>
 
-            <ProgressBar progress={myLevelInfo.progress} color={ACCENT.level} height={8} style={styles.rewardsProgress} />
+            <ProgressBar progress={myLevelInfo.progress} color={ACCENT.level} height={6} style={styles.rewardsProgress} />
 
             <View style={styles.rewardsFooter}>
               <StreakBadge streak={myRewardsStats.streak || 0} size="sm" />
-              <View style={[styles.treeCardBtn, styles.rewardsBtn, { backgroundColor: ACCENT.levelBg }]}>
-                <Text style={[styles.treeCardBtnText, { color: ACCENT.level }]}>Open Rewards</Text>
-                <Ionicons name="arrow-forward" size={14} color={ACCENT.level} />
+              <View style={styles.treeCardBtn}>
+                <Text style={[styles.treeCardBtnText, { color: ACCENT.level }]}>Open rewards</Text>
+                <Ionicons name="arrow-forward" size={13} color={ACCENT.level} />
               </View>
             </View>
           </AnimatedCard>
@@ -481,21 +481,21 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
     },
     scrollContent: {
       paddingHorizontal: spacing.lg,
-      paddingTop: 14,
+      paddingTop: 10,
     },
 
     // Header
     heroSection: {
-      paddingBottom: 20,
+      paddingBottom: 16,
     },
     greetingText: {
-      fontSize: 26,
+      fontSize: 24,
       fontWeight: '500',
       color: theme.text,
       letterSpacing: -0.4,
     },
     greetingName: {
-      fontSize: 26,
+      fontSize: 24,
       fontWeight: '700',
       color: theme.text,
       letterSpacing: -0.6,
@@ -503,51 +503,52 @@ const useStyles = createThemedStyles(({ theme, shadow }) =>
     dateText: {
       fontSize: 13,
       color: theme.secondaryText,
-      marginTop: 5,
+      marginTop: 4,
       fontWeight: '400',
       letterSpacing: 0.1,
     },
 
     // Section
     section: {
-      marginBottom: 20,
+      marginBottom: 16,
     },
     sectionChip: {
       fontSize: 10,
       fontWeight: '700',
       color: theme.secondaryText,
-      letterSpacing: 1.5,
+      letterSpacing: 1.2,
       textTransform: 'uppercase',
-      marginBottom: 8,
+      marginBottom: 7,
     },
 
     // Today Focus Card
     focusCard: {
-      backgroundColor: theme.primaryLight,
-      borderRadius: 18,
-      padding: spacing.md,
-      ...shadow,
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.border,
     },
     focusCardLoading: {
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 68,
+      minHeight: 60,
     },
     focusRow: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     focusIconWrap: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: 'rgba(255,255,255,0.75)',
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: theme.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 14,
+      marginRight: 12,
     },
     focusEmoji: {
-      fontSize: 22,
+      fontSize: 18,
     },
     focusBody: {
       flex: 1,

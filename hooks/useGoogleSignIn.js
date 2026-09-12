@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Google from 'expo-auth-session/providers/google';
 import { getFirebaseErrorMessage } from '../utils/firebaseError';
 import {
@@ -33,6 +34,9 @@ function useGoogleAuthRequestConfig() {
   }, []);
 }
 
+const isExpoGo =
+  Platform.OS !== 'web' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 export function useGoogleSignIn() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
@@ -59,6 +63,14 @@ export function useGoogleSignIn() {
       if (Platform.OS === 'web') {
         await signInWithGoogleWeb();
         return;
+      }
+
+      if (isExpoGo) {
+        const error = new Error(
+          "Google Sign-In isn't available in Expo Go. Please use the HomeHub development build."
+        );
+        error.code = 'auth/google-unsupported-in-expo-go';
+        throw error;
       }
 
       if (!request) {
