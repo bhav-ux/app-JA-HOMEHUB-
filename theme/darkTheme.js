@@ -7,7 +7,7 @@ const darkTheme = {
   primaryLight: 'rgba(96, 165, 250, 0.16)',
   border: '#2E2E2E',
   inputBackground: '#18181B',
-  messageBubbleSender: '#1D4ED8',
+  messageBubbleSender: '#1FA855',
   messageBubbleReceiver: '#262626',
   error: '#F87171',
   shadow: 'rgba(0, 0, 0, 0.32)',

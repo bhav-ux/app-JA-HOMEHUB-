@@ -49,6 +49,9 @@ const AVATAR_COLORS = [
   '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
 ];
 
+const CHAT_GREEN = '#22C55E';
+const CHAT_GREEN_DARK = '#16A34A';
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getAvatarColor(str) {
@@ -87,6 +90,24 @@ const restoreDeletedMessage = (messages, message) => {
   });
 };
 
+const getMessageDate = (message) => {
+  const value = message?.createdAt;
+  return value?.toDate ? value.toDate() : value instanceof Date ? value : new Date(value || 0);
+};
+
+const getDayLabel = (date) => {
+  const now = new Date();
+  const diff = Math.floor(
+    (new Date(now.getFullYear(), now.getMonth(), now.getDate()) -
+      new Date(date.getFullYear(), date.getMonth(), date.getDate())) /
+      86400000
+  );
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return date.toLocaleDateString([], { weekday: 'long' });
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
 const isEmojiOnly = (val) => {
   const t = val.trim();
   if (!t) return false;
@@ -107,16 +128,16 @@ function MiniAvatar({ name, uid, size = 30, emoji }) {
 }
 
 // Custom header title: avatar + name + subtitle
-function ChatHeaderTitle({ name, subtitle, emoji, chatId }) {
+function ChatHeaderTitle({ name, subtitle, emoji, chatId, textColor }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: Platform.OS === 'ios' ? -8 : 0 }}>
       <MiniAvatar name={name} uid={chatId || ''} size={38} emoji={emoji || null} />
       <View style={{ marginLeft: 10 }}>
-        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: -0.2 }} numberOfLines={1}>
+        <Text style={{ color: textColor, fontWeight: '700', fontSize: 16, letterSpacing: -0.2 }} numberOfLines={1}>
           {name}
         </Text>
         {subtitle ? (
-          <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 12, marginTop: 1 }} numberOfLines={1}>
+          <Text style={{ color: CHAT_GREEN, fontWeight: '600', fontSize: 12, marginTop: 1 }} numberOfLines={1}>
             {subtitle}
           </Text>
         ) : null}
@@ -194,8 +215,8 @@ export default function ConversationScreen({ navigation, route }) {
 
     navigation.setOptions({
       headerShown: true,
-      headerStyle: { backgroundColor: theme.primary },
-      headerTintColor: '#fff',
+      headerStyle: { backgroundColor: theme.card, shadowOpacity: 0, elevation: 0, borderBottomWidth: 1, borderBottomColor: theme.border },
+      headerTintColor: theme.text,
       headerTitleAlign: 'left',
       headerTitle: () => (
         <ChatHeaderTitle
@@ -203,6 +224,7 @@ export default function ConversationScreen({ navigation, route }) {
           subtitle={subtitle}
           emoji={emoji}
           chatId={chatId}
+          textColor={theme.text}
         />
       ),
       headerRight:
@@ -213,7 +235,7 @@ export default function ConversationScreen({ navigation, route }) {
                 style={{ marginRight: spacing.md, padding: 4 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="people-outline" size={22} color="#fff" />
+                <Ionicons name="people-outline" size={22} color={theme.secondaryText} />
               </TouchableOpacity>
             )
           : undefined,
@@ -360,7 +382,7 @@ export default function ConversationScreen({ navigation, route }) {
     return (
       <MessageBubble isSender={isSender} style={[styles.voiceBubble, !isSender && styles.receivedBubbleOverride]}>
         <TouchableOpacity onPress={() => handlePlayPauseVoice(item)} style={styles.playBtn}>
-          <Ionicons name={isPlaying ? 'pause' : 'play'} size={15} color={isSender ? '#fff' : theme.primary} />
+          <Ionicons name={isPlaying ? 'pause' : 'play'} size={15} color={isSender ? '#fff' : CHAT_GREEN_DARK} />
         </TouchableOpacity>
         <View style={styles.voiceMeta}>
           <View style={styles.progressTrack}>
@@ -395,6 +417,11 @@ export default function ConversationScreen({ navigation, route }) {
     const showAvatar = !isSender && (type === 'group' || type === 'family');
     const showName = !isSender && type === 'group';
 
+    const currentDay = getMessageDate(item);
+    const previousDay = index > 0 ? getMessageDate(messages[index - 1]) : null;
+    const showDateSeparator =
+      !previousDay || currentDay.toDateString() !== previousDay.toDateString();
+
     const bubble = (
       <View style={[styles.messageRow, isSender ? styles.rowRight : styles.rowLeft]}>
         {showName && <Text style={styles.senderName}>{senderName}</Text>}
@@ -403,8 +430,8 @@ export default function ConversationScreen({ navigation, route }) {
       </View>
     );
 
-    if (Platform.OS === 'web') {
-      return (
+    const messageContent =
+      Platform.OS === 'web' ? (
         <View style={[styles.messageOuter, isSender ? styles.outerRight : styles.outerLeft]}>
           {showAvatar && (
             <View style={styles.avatarSlot}>
@@ -418,20 +445,28 @@ export default function ConversationScreen({ navigation, route }) {
           )}
           {bubble}
         </View>
+      ) : (
+        <TouchableOpacity activeOpacity={0.92} onLongPress={() => handleMessageLongPress(item)}>
+          <View style={[styles.messageOuter, isSender ? styles.outerRight : styles.outerLeft]}>
+            {showAvatar && (
+              <View style={styles.avatarSlot}>
+                <MiniAvatar name={senderName} uid={item.senderId} size={28} />
+              </View>
+            )}
+            {bubble}
+          </View>
+        </TouchableOpacity>
       );
-    }
 
     return (
-      <TouchableOpacity activeOpacity={0.92} onLongPress={() => handleMessageLongPress(item)}>
-        <View style={[styles.messageOuter, isSender ? styles.outerRight : styles.outerLeft]}>
-          {showAvatar && (
-            <View style={styles.avatarSlot}>
-              <MiniAvatar name={senderName} uid={item.senderId} size={28} />
-            </View>
-          )}
-          {bubble}
-        </View>
-      </TouchableOpacity>
+      <View>
+        {showDateSeparator && (
+          <View style={styles.dateSeparator}>
+            <Text style={styles.dateSeparatorText}>{getDayLabel(currentDay)}</Text>
+          </View>
+        )}
+        {messageContent}
+      </View>
     );
   };
 
@@ -483,28 +518,29 @@ export default function ConversationScreen({ navigation, route }) {
         {/* ── Input bar ── */}
         <View style={[styles.inputBar, { paddingBottom: spacing.sm + Math.max(insets.bottom, 0) }]}>
           <TouchableOpacity style={styles.inputIconBtn} onPress={() => setShowEmojiPicker((p) => !p)}>
-            <Ionicons name="happy-outline" size={24} color={theme.secondaryText} />
+            <Ionicons name="happy-outline" size={22} color={theme.secondaryText} />
           </TouchableOpacity>
 
-          <TextInput
-            style={styles.inputField}
-            placeholder="Type your message..."
-            placeholderTextColor={theme.secondaryText}
-            value={input}
-            onChangeText={setInput}
-            multiline
-          />
-
-          <Pressable
-            style={[styles.inputIconBtn, (isRecording || uploadingVoice) && styles.micActive]}
-            onPressIn={startVoiceRecording}
-            onPressOut={stopVoiceRecording}
-          >
-            {uploadingVoice
-              ? <ActivityIndicator size="small" color={theme.primary} />
-              : <Ionicons name={isRecording ? 'mic' : 'mic-outline'} size={22} color={isRecording ? '#fff' : theme.secondaryText} />
-            }
-          </Pressable>
+          <View style={styles.inputFieldWrap}>
+            <TextInput
+              style={styles.inputField}
+              placeholder="Type a message..."
+              placeholderTextColor={theme.secondaryText}
+              value={input}
+              onChangeText={setInput}
+              multiline
+            />
+            <Pressable
+              style={[styles.micInline, (isRecording || uploadingVoice) && styles.micActive]}
+              onPressIn={startVoiceRecording}
+              onPressOut={stopVoiceRecording}
+            >
+              {uploadingVoice
+                ? <ActivityIndicator size="small" color={CHAT_GREEN} />
+                : <Ionicons name={isRecording ? 'mic' : 'mic-outline'} size={19} color={isRecording ? '#fff' : theme.secondaryText} />
+              }
+            </Pressable>
+          </View>
 
           <TouchableOpacity
             style={[styles.sendBtn, (!input.trim() || sending || uploadingVoice || isRecording) && styles.sendBtnDisabled]}
@@ -605,6 +641,19 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     timeRight: { alignSelf: 'flex-end' },
     timeLeft: { alignSelf: 'flex-start' },
 
+    // ── Date separator ──
+    dateSeparator: { alignItems: 'center', marginVertical: spacing.md },
+    dateSeparatorText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.secondaryText,
+      backgroundColor: theme.inputBackground,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 5,
+      borderRadius: 999,
+      overflow: 'hidden',
+    },
+
     // ── Voice bubble ──
     voiceBubble: {
       minWidth: 0,
@@ -626,7 +675,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
     progressTrack: { height: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
     progressFill: { height: '100%' },
     progressRight: { backgroundColor: '#fff' },
-    progressLeft: { backgroundColor: theme.primary },
+    progressLeft: { backgroundColor: '#22C55E' },
     voiceDur: { marginTop: 4, fontSize: 11 },
 
     // ── Emoji ──
@@ -656,34 +705,48 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderTopColor: theme.border,
     },
     inputIconBtn: {
-      width: 40,
-      height: 40,
+      width: 38,
+      height: 38,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 20,
+      borderRadius: 19,
     },
     micActive: {
-      backgroundColor: theme.primary,
+      backgroundColor: '#22C55E',
+    },
+    inputFieldWrap: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      marginHorizontal: spacing.xs,
+      backgroundColor: theme.inputBackground,
+      borderRadius: 22,
+      paddingLeft: spacing.md,
+      paddingRight: 4,
     },
     inputField: {
       flex: 1,
       minHeight: 40,
       maxHeight: 110,
-      marginHorizontal: spacing.xs,
-      paddingHorizontal: spacing.md,
       paddingTop: 10,
       paddingBottom: 10,
-      backgroundColor: theme.inputBackground,
-      borderRadius: 22,
       fontSize: 15,
       color: theme.text,
       lineHeight: 20,
+    },
+    micInline: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
     },
     sendBtn: {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.primary,
+      backgroundColor: '#22C55E',
       alignItems: 'center',
       justifyContent: 'center',
     },

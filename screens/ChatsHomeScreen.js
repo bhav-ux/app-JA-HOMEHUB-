@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -28,6 +29,14 @@ import { showAlert } from '../utils/dialogs';
 const AVATAR_COLORS = [
   '#6366F1', '#F43F5E', '#F59E0B', '#0D9488',
   '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
+];
+
+const CHAT_GREEN = '#22C55E';
+const CHAT_GREEN_LIGHT = '#E7F9EE';
+
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'groups', label: 'Groups' },
 ];
 
 function getAvatarColor(str) {
@@ -104,6 +113,8 @@ export default function ChatsHomeScreen({ navigation }) {
   const [familyChatPreview, setFamilyChatPreview] = useState(null);
   const [familyMemberIds, setFamilyMemberIds] = useState([]);
   const [nameMap, setNameMap] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
 
   const nameListenersRef = useRef({});
 
@@ -193,7 +204,7 @@ export default function ChatsHomeScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={CHAT_GREEN} />
       </SafeAreaView>
     );
   }
@@ -202,19 +213,60 @@ export default function ChatsHomeScreen({ navigation }) {
   const familyPreviewText = familyChatPreview?.text
     || (familyMemberIds.length > 0 ? `${familyMemberIds.length} members` : 'Your family group chat');
 
+  const query = searchQuery.trim().toLowerCase();
+  const showFamilyChat = activeFilter !== 'groups' && (!query || 'family chat'.includes(query));
+  const filteredDms = activeFilter === 'groups'
+    ? []
+    : dms.filter((dm) => {
+        if (!query) return true;
+        const otherUid = (dm.members || []).find((uid) => uid !== currentUser?.uid) || '';
+        return (nameMap[otherUid] || '').toLowerCase().includes(query);
+      });
+  const filteredGroups = groups.filter((group) => !query || (group.name || '').toLowerCase().includes(query));
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* ── Blue header zone ─────────────────────────────────── */}
+      {/* ── Header zone ─────────────────────────────────── */}
       <View style={styles.headerZone}>
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>MESSAGES</Text>
+          <Text style={styles.headerTitle}>Chats</Text>
           <TouchableOpacity
             style={styles.composeBtn}
             onPress={() => navigation.navigate('NewChat', { familyId })}
             activeOpacity={0.8}
           >
-            <Ionicons name="create-outline" size={20} color={theme.primary} />
+            <Ionicons name="add" size={22} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search bar */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={17} color={theme.secondaryText} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            placeholderTextColor={theme.secondaryText}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+        </View>
+
+        {/* Filter pills */}
+        <View style={styles.filterRow}>
+          {FILTERS.map((f) => {
+            const active = activeFilter === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                onPress={() => setActiveFilter(f.key)}
+                activeOpacity={0.8}
+                style={[styles.filterPill, active && styles.filterPillActive]}
+              >
+                <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Member avatars strip */}
@@ -230,7 +282,7 @@ export default function ChatsHomeScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <View style={styles.newChatCircle}>
-              <Ionicons name="add" size={26} color="#fff" />
+              <Ionicons name="add" size={26} color={CHAT_GREEN} />
             </View>
             <Text style={styles.memberItemLabel}>New</Text>
           </TouchableOpacity>
@@ -260,19 +312,21 @@ export default function ChatsHomeScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
 
           {/* Family Chat — always pinned at top */}
-          <ChatRow
-            onPress={navigateToFamilyChat}
-            accent
-            name="Family Chat"
-            subtitle={familyPreviewText}
-            timestamp={familyChatPreview?.createdAt}
-            styles={styles}
-            theme={theme}
-            avatar={<Avatar emoji="🏠" size={56} color={theme.primary} />}
-          />
+          {showFamilyChat && (
+            <ChatRow
+              onPress={navigateToFamilyChat}
+              accent
+              name="Family Chat"
+              subtitle={familyPreviewText}
+              timestamp={familyChatPreview?.createdAt}
+              styles={styles}
+              theme={theme}
+              avatar={<Avatar emoji="🏠" size={56} color={CHAT_GREEN} />}
+            />
+          )}
 
           {/* Direct Messages */}
-          {dms.map((dm) => {
+          {filteredDms.map((dm) => {
             const otherUid = (dm.members || []).find((uid) => uid !== currentUser?.uid) || '';
             const otherName = nameMap[otherUid] || 'Family Member';
             return (
@@ -290,10 +344,10 @@ export default function ChatsHomeScreen({ navigation }) {
           })}
 
           {/* Groups */}
-          {groups.length > 0 && (
+          {filteredGroups.length > 0 && (
             <Text style={styles.sectionLabel}>Groups</Text>
           )}
-          {groups.map((group) => (
+          {filteredGroups.map((group) => (
             <ChatRow
               key={group.id}
               onPress={() => navigateToGroup(group)}
@@ -314,7 +368,7 @@ export default function ChatsHomeScreen({ navigation }) {
           ))}
 
           {/* Empty state */}
-          {dms.length === 0 && groups.length === 0 && (
+          {!showFamilyChat && filteredDms.length === 0 && filteredGroups.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>💬</Text>
               <Text style={styles.emptyTitle}>Start a conversation</Text>
@@ -342,12 +396,12 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: theme.primary,
+      backgroundColor: theme.card,
     },
 
-    // ── Header zone (blue) ──
+    // ── Header zone ──
     headerZone: {
-      backgroundColor: theme.primary,
+      backgroundColor: theme.card,
       paddingTop: spacing.sm,
     },
     headerRow: {
@@ -358,18 +412,61 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       paddingBottom: spacing.md,
     },
     headerTitle: {
-      fontSize: 22,
+      fontSize: 26,
       fontWeight: '800',
-      letterSpacing: 2,
-      color: '#fff',
+      color: theme.text,
     },
     composeBtn: {
       width: 38,
       height: 38,
       borderRadius: 19,
-      backgroundColor: 'rgba(255,255,255,0.92)',
+      backgroundColor: CHAT_GREEN,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+
+    // ── Search bar ──
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.md,
+      paddingHorizontal: spacing.md,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.inputBackground,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.text,
+      padding: 0,
+    },
+
+    // ── Filter pills ──
+    filterRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.md,
+    },
+    filterPill: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: 7,
+      borderRadius: 999,
+      backgroundColor: theme.inputBackground,
+    },
+    filterPillActive: {
+      backgroundColor: CHAT_GREEN_LIGHT,
+    },
+    filterPillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.secondaryText,
+    },
+    filterPillTextActive: {
+      color: '#15803D',
     },
 
     // ── Member strip ──
@@ -395,7 +492,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderRadius: 6,
       backgroundColor: '#22C55E',
       borderWidth: 2,
-      borderColor: theme.primary,
+      borderColor: theme.card,
     },
     newChatCircle: {
       width: 52,
@@ -403,14 +500,14 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       borderRadius: 26,
       borderWidth: 2,
       borderStyle: 'dashed',
-      borderColor: 'rgba(255,255,255,0.55)',
-      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderColor: theme.border,
+      backgroundColor: theme.inputBackground,
       alignItems: 'center',
       justifyContent: 'center',
     },
     memberItemLabel: {
       fontSize: 11,
-      color: 'rgba(255,255,255,0.88)',
+      color: theme.secondaryText,
       marginTop: 5,
       fontWeight: '500',
       textAlign: 'center',
@@ -433,7 +530,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       overflow: 'hidden',
     },
     chatRowAccent: {
-      backgroundColor: theme.primaryLight,
+      backgroundColor: CHAT_GREEN_LIGHT,
     },
     accentBar: {
       position: 'absolute',
@@ -441,7 +538,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       top: 0,
       bottom: 0,
       width: 3,
-      backgroundColor: theme.primary,
+      backgroundColor: CHAT_GREEN,
     },
     chatRowInner: {
       flexDirection: 'row',
@@ -467,7 +564,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       marginRight: spacing.sm,
     },
     chatRowNameAccent: {
-      color: theme.primary,
+      color: '#15803D',
     },
     chatRowTime: {
       fontSize: 11,
@@ -513,7 +610,7 @@ const useStyles = createThemedStyles(({ theme, radius, shadow }) =>
       marginBottom: spacing.xl,
     },
     emptyBtn: {
-      backgroundColor: theme.primary,
+      backgroundColor: CHAT_GREEN,
       paddingHorizontal: spacing.xl,
       paddingVertical: spacing.md,
       borderRadius: radius.lg,
